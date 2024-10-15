@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from app.src.users.routes import router as users_router
 from pymongo import MongoClient
+from fastapi.middleware.cors import CORSMiddleware
 
 # TODO: refactor to this
 # @asynccontextmanager
@@ -14,7 +15,16 @@ from pymongo import MongoClient
 #         client.close()
 
 
-app = FastAPI()
+app = FastAPI(docs_url="/")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
