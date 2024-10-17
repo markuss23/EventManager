@@ -48,7 +48,7 @@ function LogIn({ open, handleClose }) {
         }
       })
       .then((data) => {
-        setUser({ username: data.username });
+        setUser({ username: data.username, email: data.email, _id: data._id });
       })
       .catch((error) => {
         console.error("Error:", error.message);

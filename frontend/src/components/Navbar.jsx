@@ -2,13 +2,14 @@ import { useContext, useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogIn from "./modals/LogIn";
 import UserContext from "../context/UserContext";
 import UserDrawer from "./drawers/UserDrawer";
+import { Link } from "react-router-dom";
+
 
 export default function Navbar() {
   const user = useContext(UserContext);
@@ -45,9 +46,15 @@ export default function Navbar() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Events
-          </Typography>
+          <Link to="/" style={{
+            textDecoration: "none",
+            color: "white",
+            flexGrow: 1
+          }}>
+            <Button color="inherit">
+              Home
+            </Button>
+          </Link>
           {user.user ? (
             <Button onClick={handleOpenUserDrawer} color="inherit">
               {" "}
@@ -60,7 +67,10 @@ export default function Navbar() {
               </Button>
             </>
           )}
-          <UserDrawer open={openUserDrawer} handleClose={handleCloseUserDrawer} />
+          <UserDrawer
+            open={openUserDrawer}
+            handleClose={handleCloseUserDrawer}
+          />
           <LogIn open={openLogIn} handleClose={handleCloseLogIn} />
         </Toolbar>
       </AppBar>
