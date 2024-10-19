@@ -2,13 +2,17 @@ from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Request
 
 from app.src.events.schemas import EventCreate, Event
+from app.databases import mongo_client
 
 
 router = APIRouter(prefix="/events", tags=["events"])
 
+mongo_client = mongo_client.get_db()
+collection = mongo_client["events"]
+
 @router.get("/", response_model=list[Event])
 def get_events(request:Request) -> list[Event]:
-    events = request.app.database["events"].find()
+    events = collection.find()
     return list(events)
 
 
@@ -26,13 +30,13 @@ def create_event(
         "owner_id": event.owner_id,
         "attendees": event.attendees,
     }
-    request.app.database["events"].insert_one(new_event)
+    collection.insert_one(new_event)
     return new_event
 
 
 @router.get("/{event_id}", response_model=Event)
 def get_event(event_id: str, request: Request) -> Event:
-    event = request.app.database["events"].find_one({"_id": event_id})
+    event = collection.find_one({"_id": event_id})
     if event:
         return event
     raise HTTPException(status_code=404, detail="Event not found")
@@ -40,9 +44,9 @@ def get_event(event_id: str, request: Request) -> Event:
 
 @router.put("/{event_id}", response_model=Event)
 def update_event(event_id: str, event: EventCreate, request: Request) -> Event:
-    existing_event = request.app.database["events"].find_one({"_id": event_id})
+    existing_event = collection.find_one({"_id": event_id})
     if existing_event:
-        request.app.database["events"].update_one(
+        collection.update_one(
             {"_id": event_id}, {"$set": dict(event)}
         )
         return event
@@ -51,5 +55,5 @@ def update_event(event_id: str, event: EventCreate, request: Request) -> Event:
 
 @router.get("/user/{user_id}", response_model=list[Event])
 def get_user_events(user_id: str, request: Request) -> list[Event]:
-    events = request.app.database["events"].find({"owner_id": user_id})
+    events = collection.find({"owner_id": user_id})
     return list(events)
