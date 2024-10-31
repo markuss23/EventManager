@@ -1,0 +1,62 @@
+from datetime import datetime, timedelta
+import asyncio
+import threading
+from fastapi import APIRouter, WebSocket
+from app.databases import mongo_client, redis_client
+from app.src.events.schemas import Event
+from app.src.websockets.utils import event_listener  # Assuming this is where you'll handle listening for event notifications
+
+router = APIRouter(prefix="/ws")
+
+# Initialize MongoDB and Redis clients
+mongo_client = mongo_client.get_db()
+redis_client = redis_client.get_db()
+
+# MongoDB events collection
+collection = mongo_client["events"]
+
+# Start event listener in a separate thread
+thread = threading.Thread(target=event_listener)
+thread.start()
+
+# Helper function to schedule event notifications
+def schedule_event_notification(event: Event):
+    notification_time = event.start_time - timedelta(days=1)  # 1 day before event
+    ttl = (notification_time - datetime.now()).total_seconds()  # Time in seconds
+
+    if ttl > 0:
+        # Store event data in Redis and set expiration to trigger notification
+        redis_client.set(event.event_id, event.model_dump_json())
+        redis_client.expire(event.event_id, int(ttl))  # Set TTL for 1 day before event
+    else:
+        print(f"Event {event.title} already passed, skipping notification.")
+
+# Publisher function to send notifications when the event's TTL expires
+def publish_event_notification(event_id):
+    # Publish notification to the Redis PUB/SUB channel
+    redis_client.publish("event_notifications_channel", f"Event {event_id} is starting soon!")
+
+# WebSocket endpoint to handle connections and notifications
+@router.websocket("/notification/{event_id}")
+async def websocket_endpoint(websocket: WebSocket, event_id: str):
+    query = collection.find_one({"_id": event_id})
+    if query:
+        event = Event(**query)
+
+        # Schedule the event notification
+        schedule_event_notification(event)
+
+        # Start listening for event notifications
+        await websocket.accept()
+        websocket_loop_task = asyncio.create_task(event_listener(websocket))
+
+        # WebSocket main loop to handle incoming messages from the client
+        try:
+            while True:
+                data = await websocket.receive_text()
+                await websocket.send_text(f"Received message: {data}")
+        # except WebSocketDisconnect:
+        #     print(f"WebSocket disconnected for event {event_id}")
+        finally:
+            websocket_loop_task.cancel()  # Cancel the listener task when WebSocket is closed
+

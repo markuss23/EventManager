@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CircularProgress, Box, Typography, Container, Divider } from "@mui/material";
+import {
+  CircularProgress,
+  Box,
+  Typography,
+  Container,
+  Divider,
+} from "@mui/material";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
@@ -11,8 +17,10 @@ import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import CalendarView from "../calendar/CalendarView";
+import getAlertRender from "../../utils";
 
 function EventDetailRender({ event }) {
+
   return (
     <Container>
       <Card
@@ -73,7 +81,7 @@ function EventDetailRender({ event }) {
                   color: "#424242",
                   wordWrap: "break-word", // Ensure text wraps within its container
                   whiteSpace: "pre-line", // Keep formatting for new lines
-                  maxWidth:"230px"
+                  maxWidth: "230px",
                 }}
               >
                 {event.description}
@@ -104,7 +112,6 @@ function EventDetailRender({ event }) {
         </Box>
       </Card>
     </Container>
-
   );
 }
 
@@ -119,7 +126,10 @@ function EventDetail() {
     fetch("http://127.0.0.1:8000/events/" + id)
       .then((res) => {
         if (!res.ok) {
-          throw new Error("Failed to fetch event data");
+          if (res.status === 404) {
+            throw new Error("Událost nebyla nalezena"); // Pokud není nalezena událost
+          }
+          throw new Error("Došlo k chybě při načítání události"); // Ostatní chyby
         }
         return res.json();
       })
@@ -150,11 +160,9 @@ function EventDetail() {
 
   if (error) {
     return (
-      <Box sx={{ textAlign: "center", mt: 4 }}>
-        <Typography variant="h6" color="error">
-          Error: {error}
-        </Typography>
-      </Box>
+      <div style={{marginTop:5}}>
+          {getAlertRender(error, "error")}
+      </div>
     );
   }
 

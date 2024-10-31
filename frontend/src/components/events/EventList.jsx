@@ -1,4 +1,4 @@
-import { List, IconButton, Grid2, Divider } from "@mui/material";
+import { List, IconButton, Grid2, Divider, CircularProgress } from "@mui/material";
 import AddTaskIcon from "@mui/icons-material/AddTask";
 import PropTypes from "prop-types";
 import { useState, useEffect, useContext, useCallback } from "react";
@@ -23,6 +23,7 @@ function EventList() {
   const user = useContext(UserContext);
   const [eventsListData, setEventsListData] = useState([]);
   const [openCreateEvent, setOpenCreateEvent] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const handleOpenCreateEvent = () => {
     setOpenCreateEvent(true);
@@ -65,11 +66,14 @@ function EventList() {
 
   useEffect(() => {
     if (user.user) {
+      setLoading(true);
       fetch("http://127.0.0.1:8000/events/user/" + user.user._id)
         .then((res) => res.json())
         .then((data) => {
           setEventsListData(data);
-        });
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }
   }, [user.user]);
 
@@ -81,7 +85,11 @@ function EventList() {
           <AddTaskIcon color="success" />
         </IconButton>
         <Divider />
-        <EventListRender events={eventsListData} />
+        {loading ? (
+          <CircularProgress />
+        ) : (
+          <EventListRender events={eventsListData} />
+        )}
       </List>
       <CreateEvent
         open={openCreateEvent}

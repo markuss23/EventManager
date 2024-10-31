@@ -5,6 +5,7 @@ import { useState } from "react";
 import Home from "./Home";
 import EventDetail from "./components/events/EventDetail";
 import { Box, Container, Typography } from "@mui/material";
+import GetAlertRender from "./utils";
 
 function App() {
   const [user, setUser] = useState(null); // null to represent not logged in
@@ -12,9 +13,10 @@ function App() {
   function getUser(user) {
     if (!user) {
       return (
-        <div>
-          <h2>Not logged in</h2>
+        <div style={{ marginTop: 5 }}>
+          {GetAlertRender("Please log in to view events.", "info")}
         </div>
+      
       );
     }
   }

@@ -1,12 +1,16 @@
 import PropTypes from "prop-types";
 import { Box, Card, CardContent, Typography } from "@mui/material";
-import { format } from "date-fns"; // Pro formátování datumu
+import { format } from "date-fns";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DescriptionIcon from "@mui/icons-material/Description";
 import { Link } from "react-router-dom";
+import { getEventStatus } from "../../utils";
+import Websocket from "../websocket/Websocket";
 
 function EventCard({ event }) {
+  const eventStatus = getEventStatus(event);
+
   const truncatedDescription =
     event.description.length > 12
       ? `${event.description.substring(0, 12)}...`
@@ -21,6 +25,8 @@ function EventCard({ event }) {
         boxShadow: 3,
         bgcolor: "#f9f9f9",
         "&:hover": { boxShadow: 6 },
+        borderColor: eventStatus.color,
+        borderWidth: 2,
       }}
     >
       <Link
@@ -40,7 +46,7 @@ function EventCard({ event }) {
           <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
             <AccountCircleIcon sx={{ mr: 1, color: "#757575" }} />
             <Typography sx={{ color: "#757575" }}>
-              Owner: {event.owner_id}
+              Owner: {event.owner.username}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
@@ -63,6 +69,7 @@ function EventCard({ event }) {
           </Box>
         </CardContent>
       </Link>
+      {eventStatus.status === "upcoming" && <Websocket event={event} />}
     </Card>
   );
 }

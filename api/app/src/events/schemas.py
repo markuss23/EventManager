@@ -1,5 +1,6 @@
 from datetime import datetime
 import uuid
+from app.src.users.schemas import User
 from pydantic import BaseModel, Field
 
 
@@ -9,8 +10,11 @@ class Event(BaseModel):
     start_time: datetime
     end_time: datetime
     description: str
-    owner_id: str 
+    owner_id:str = Field(default_factory=uuid.uuid4) 
     attendees: list[str] = []
+    
+class EventOwner(Event):
+    owner: User
     
 class EventCreate(BaseModel):
     title: str
