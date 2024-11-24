@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from app.src.auth.utils import hash_password
+from pydantic import BaseModel, field_validator
 from pydantic import Field
 import uuid
 
@@ -10,12 +11,20 @@ class User(BaseModel):
     last_name: str
     email: str
 
-
 class UserCreate(BaseModel):
     username: str
     first_name: str
     last_name: str
     email: str
+    password: str | bytes
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value) -> bytes:
+        print(type(value))
+        return hash_password(value)
+             
+    
 
 
 class UserUpdate(BaseModel):

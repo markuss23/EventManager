@@ -91,21 +91,28 @@ def get_user_events(user_id: str) -> list[EventOwner]:
 
     cached_user_events = redis_client.get(cache_key)
     if cached_user_events:
-        print("Cache hit for user events")
         events = json.loads(cached_user_events)
         return [EventOwner(**event) for event in events]
 
-    pipeline = [
-        {"$match": {"owner_id": user_id}},  # Match events for the specific user
+    pipeline: list = [
+        {"$match": {"$or": [{"owner_id": user_id}, {"attendees": {"$in": [user_id]}}]}},
         {
             "$lookup": {
                 "from": "users",
                 "localField": "owner_id",
                 "foreignField": "_id",
                 "as": "owner",
-            }
+            },
         },
-        {"$unwind": "$owner"},
+        {"$unwind": {"path": "$owner", "preserveNullAndEmptyArrays": True}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "attendees",
+                "foreignField": "_id",
+                "as": "attendees",
+            },
+        },
     ]
 
     events = list(collection.aggregate(pipeline))

@@ -6,6 +6,8 @@ import UserContext from "../../context/UserContext";
 import EventCard from "./EventCard";
 import CreateEvent from "../modals/CreateEvent";
 
+
+
 const EventListRender = ({ events }) => {
   return (
     <Grid2 container spacing={2}>
@@ -51,6 +53,7 @@ function EventList() {
           }
         })
         .then((data) => {
+          
           if (user.user._id === data.owner_id) {
             console.log(data);
 
@@ -72,6 +75,7 @@ function EventList() {
         .then((data) => {
           setEventsListData(data);
           setLoading(false);
+          console.log(data);
         })
         .catch(() => setLoading(false));
     }

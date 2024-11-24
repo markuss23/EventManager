@@ -1,3 +1,4 @@
+from app.src.auth.utils import generate_jwt_token
 from fastapi import APIRouter, HTTPException
 from bson import ObjectId
 from fastapi.requests import Request
@@ -36,21 +37,12 @@ def create_user(
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
+        "password": user.password,
         "events": [],
     }
 
     collection.insert_one(new_user)
     return new_user
-
-
-@router.post("/signin", response_model=User)
-def signin_user(
-    user: UserSignin,
-) -> User:
-    existing_user = collection.find_one({"email": user.email})
-    if existing_user:
-        return existing_user
-    raise HTTPException(status_code=404, detail="User not found")
 
 
 @router.get("/{user_id}", response_model=User)

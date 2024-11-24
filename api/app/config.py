@@ -9,6 +9,10 @@ from typing_extensions import Annotated
 Port = Annotated[int, Field(ge=0, le=65535)]
 
 
+class AppSettings(BaseModel):
+    secret_key: str
+
+
 class MongoSettings(BaseModel):
     host: str
     port: Port
@@ -29,6 +33,7 @@ class RedisSettings(BaseModel):
 class Settings(BaseSettings):
     mongo: MongoSettings
     redis: RedisSettings
+    app: AppSettings
     model_config = SettingsConfigDict(
         env_file=".env",  # Pokud není definováno, nenačte se žádný soubor.
         env_file_encoding="utf-8",  # Pokud není definováno, použije se kódování systému

@@ -11,7 +11,7 @@ class Event(BaseModel):
     end_time: datetime
     description: str
     owner_id:str = Field(default_factory=uuid.uuid4) 
-    attendees: list[str] = []
+    attendees: list[User] = []
     
 class EventOwner(Event):
     owner: User
