@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from bson import ObjectId
 from fastapi import HTTPException
 from loguru import logger
@@ -6,6 +7,7 @@ from pymongo.results import InsertOneResult
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.cursor import Cursor
 from app.src.events.schemas import Event, EventCreate, EventUpdate
+from redis import Redis
 
 
 def get_events(mongo: MongoClient) -> list[Event]:
@@ -41,7 +43,7 @@ def get_event(event_id: str, mongo: MongoClient) -> Event:
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-def create_event(data: EventCreate, mongo: MongoClient) -> Event:
+def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
     """Create a new event.
 
     Args:
@@ -79,8 +81,20 @@ def create_event(data: EventCreate, mongo: MongoClient) -> Event:
             )
 
         event: InsertOneResult = collection.insert_one(data.model_dump())
+        
+        res = Event(**collection.find_one({"_id": event.inserted_id}))
+        
+        for rem in res.reminders:
+            reminder_time: datetime = res.start_time - timedelta(
+                minutes=rem.reminder_time
+            )
+            if reminder_time > datetime.now():
+                redis.zadd(
+                    f"event:{res.event_id}:reminders",
+                    {res.title: reminder_time.timestamp()},
+                )
 
-        return Event(**collection.find_one({"_id": event.inserted_id}))
+        return res
     except HTTPException as e:
         raise e
     except Exception as e:

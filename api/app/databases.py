@@ -14,7 +14,7 @@ def get_mongo_client() -> Generator[MongoClient, Any, None]:
         db.client.close()
 
 
-def get_redis() -> Generator[Redis, Any, None]:
+def get_redis_client() -> Generator[Redis, Any, None]:
     redis = Redis(
         host=settings.redis.host,
         port=settings.redis.port,

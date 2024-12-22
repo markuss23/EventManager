@@ -1,81 +1,124 @@
-# import asyncio
-# import json
-# import threading
-# from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-# from app.databases import mongo_client, redis_client
-# from app.src.events.schemas import Event
+import asyncio
+from datetime import datetime, timedelta
+import json
+from typing import Annotated, LiteralString
+from app.databases import get_mongo_client, get_redis_client
+from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from loguru import logger
+from pymongo import MongoClient
+from pymongo.synchronous.collection import Collection
+from redis import Redis
 
-# router = APIRouter(prefix="/ws")
 
-# mongo_client = mongo_client.get_db()
-# redis_client = redis_client.get_db()
+router = APIRouter(prefix="/ws")
 
-# collection = mongo_client["events"]
 
-# # Dictionary to store active websockets by event_id
-# active_websockets = {}
+async def send_reminder_notification(websocket: WebSocket, reminder_text: str):
+    """Sends a reminder notification over the WebSocket."""
+    try:
+        await websocket.send_text(
+            reminder_text
+        )
+    except RuntimeError as e:
+        if "WebSocket is not connected" in str(e):
+            logger.info("WebSocket disconnected, stopping reminder sending.")
+            return False  # Indicate disconnection
+        else:
+            raise  # Re-raise other RuntimeErrors
+    return True
 
-# def event_listener():
-#     pubsub = redis_client.pubsub()
-#     # Subscribe to key expiration events in Redis
-#     pubsub.psubscribe("__keyevent@0__:expired")
 
-#     for message in pubsub.listen():
-#         if message["type"] == "pmessage":
-#             event_id = message["data"].decode("utf-8")
-#             print(f"Key {event_id} expired.")
-            
-#             # Notify active websocket clients when the event expires
-#             if event_id in active_websockets:
-#                 websocket = active_websockets.pop(event_id, None)
-#                 if websocket:
-#                     try:
-#                         threading.Thread(target=lambda: asyncio.run(notify_expiration(websocket, event_id))).start()
-#                     except Exception as e:
-#                         print(f"Error notifying WebSocket: {e}")
+async def monitor_reminders(
+    websocket: WebSocket, user_id: str, redis: Redis, mongo: MongoClient
+):
+    """Monitors reminders for a user and sends notifications via WebSocket."""
+    try:
+        while True:  # Keep monitoring until WebSocket disconnects
+            events = mongo["events"].find({"attendees": {"$in": [user_id]}})
+            for event in events:
+                event_id = str(event["_id"])
+                reminders_key = f"event:{event_id}:reminders"
+                # Get reminders from event data
+                event_reminders = event.get("reminders", [])
+                # Calculate upcoming reminders based on event start time
+                upcoming_reminders = []
+                event_start_time = event.get("start_time")
+                if event_start_time:
+                    for rem in event_reminders:
+                        reminder_time = event_start_time - timedelta(
+                            minutes=rem["reminder_time"]
+                        )
+                        if reminder_time.replace(
+                            second=0, microsecond=0
+                        ) == datetime.now().replace(second=0, microsecond=0):
+                            # Reminder is upcoming and hasn't been sent yet
+                            reminder_text: str = (
+                                json.dumps(
+                                    {
+                                        "event_id": event_id,
+                                        "reminder_text": rem["reminder_text"],
+                                        "type": "reminder",
+                                    }
+                                )
+                            )
+                            upcoming_reminders.append(
+                                (
+                                    reminder_text.encode("utf-8"),
+                                    reminder_time.timestamp(),
+                                )
+                            )
 
-# async def notify_expiration(websocket, event_id):
-#     try:
-#         message = f"Event {event_id} has expired."
-#         await websocket.send_text(json.dumps({
-#             "message": message,
-#             "event_id": event_id,
-#             "type": "expiration"
-            
-#         }))
-#         # await websocket.close()
-#     except Exception as e:
-#         print(f"Error sending expiration notification: {e}")
+                # Sort reminders by timestamp (ascending)
+                upcoming_reminders.sort(key=lambda x: x[1])
 
-# # Start the Redis event listener in a separate thread
-# thread = threading.Thread(target=event_listener)
-# thread.start()
+                for reminder, _rem_timestamp in upcoming_reminders:
+                    if await send_reminder_notification(
+                        websocket, reminder.decode("utf-8")
+                    ):
+                        redis.zrem(reminders_key, reminder)  # Remove after sending
+                    else:
+                        return  # Exit the loop if WebSocket is disconnected
 
-# @router.websocket("/notification/{event_id}")
-# async def websocket_endpoint(websocket: WebSocket, event_id: str):
-#     # Connect WebSocket
-#     await websocket.accept()
+            await asyncio.sleep(60) 
+    except Exception as e:
+        logger.info(f"Error in reminder monitoring: {e}")
+    finally:
+        logger.info(f"Reminder monitoring stopped for user {user_id}")
 
-#     # Store WebSocket connection for event_id
-#     active_websockets[event_id] = websocket
 
-#     # Fetch event from MongoDB
-#     query = collection.find_one({"_id": event_id})
-#     if query:
-#         event = Event(**query)
-#     else:
-#         await websocket.send_text(f"Event {event_id} not found.")
-#         # await websocket.close()
-#         return
+@router.websocket("/{user_id}")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    user_id: str,
+    redis: Annotated[get_redis_client, Depends()],
+    mongo: Annotated[get_mongo_client, Depends()],
+) -> None:
+    try:
+        if mongo["users"].find_one({"_id": ObjectId(user_id)}) is None:
+            await websocket.close(
+                code=1000, reason="User not found"
+            )  # Close with proper code
+            return
 
-#     # Store event in Redis with a TTL (5 seconds for demonstration)
-#     redis_client.set(event_id, event.model_dump_json())
-#     redis_client.expire(event_id, 5)
+        await websocket.accept()
+        logger.info(f"WebSocket connection established for user {user_id}")
+        events = (
+            mongo["events"].find({"attendees": {"$in": [user_id]}}).to_list(length=None)
+        )
+        if not events:
+            await websocket.send_text(
+                json.dumps({"type": "message", "content": "Nemáte žádné události"})
+            )
+            await websocket.close()
+            return
 
-#     try:
-#         while True:
-#             data = await websocket.receive_text()
-#             await websocket.send_text(f"Received: {data}")
-#     except WebSocketDisconnect:
-#         print(f"WebSocket for event {event_id} disconnected.")
-#         active_websockets.pop(event_id, None)
+        await monitor_reminders(websocket, user_id, redis, mongo)  # Start monitoring
+        await websocket.receive()  # Keep connection alive
+
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+
+    finally:
+        logger.error(f"WebSocket connection closed for user {user_id}")
+        await websocket.close()
