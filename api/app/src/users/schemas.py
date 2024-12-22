@@ -7,9 +7,17 @@ import uuid
 class User(BaseModel):
     id: str = Field(default_factory=uuid.uuid4, alias="_id")
     username: str
-    first_name: str 
+    first_name: str
     last_name: str
     email: str
+    
+    @field_validator("id", mode="before")
+    @classmethod
+    def transform_id(cls, value) -> str:
+        if not isinstance(value, str):
+            return str(value)   
+        return value
+
 
 class UserCreate(BaseModel):
     username: str
@@ -21,17 +29,15 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value) -> bytes:
-        print(type(value))
         return hash_password(value)
-             
-    
 
 
 class UserUpdate(BaseModel):
-    username: str | None = None
-    email: str | None = None
-    first_name: str | None = None
-    last_name: str | None = None
+    username: str
+    email: str
+    first_name: str 
+    last_name: str
+
 
 class UserSignin(BaseModel):
     email: str

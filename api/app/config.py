@@ -4,7 +4,7 @@ from pydantic import (
     BaseModel,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Annotated
+from typing import Annotated
 
 Port = Annotated[int, Field(ge=0, le=65535)]
 
@@ -22,8 +22,8 @@ class MongoSettings(BaseModel):
 
     def url(self) -> str:
         return f'mongodb://{self.username}:{self.password.get_secret_value()}@{self.host}{":" + str(self.port)}/'
-    
-    
+
+
 class RedisSettings(BaseModel):
     host: str
     port: Port

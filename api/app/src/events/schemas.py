@@ -1,34 +1,38 @@
 from datetime import datetime
 import uuid
 from app.src.users.schemas import User
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Event(BaseModel):
-    event_id: str =  Field(default_factory=uuid.uuid4, alias="_id")
+    event_id: str = Field(default_factory=uuid.uuid4, alias="_id")
     title: str
     start_time: datetime
     end_time: datetime
     description: str
-    owner_id:str = Field(default_factory=uuid.uuid4) 
-    attendees: list[User] = []
+    creator: str = Field(default_factory=uuid.uuid4)
+    attendees: list[str] = []
     
+    @field_validator("event_id", mode="before")
+    @classmethod
+    def transform_id(cls, value) -> str:
+        if not isinstance(value, str):
+            return str(value)   
+        return value
+
+
 class EventOwner(Event):
     owner: User
-    
+
+
 class EventCreate(BaseModel):
     title: str
     start_time: datetime
     end_time: datetime
     description: str
-    owner_id: str
+    creator: str
     attendees: list[str] = []
 
 
-class EventUpdate(BaseModel):
-    title: str | None = None
-    start_time: datetime | None = None
-    end_time: datetime | None = None
-    description: str | None = None
-    owner_id: str | None = None
-    attendees: list[str] | None = None
+class EventUpdate(EventCreate):
+    ...

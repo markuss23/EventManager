@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 
-public_endpoints = ["/", "/openapi.json", "/v1/auth/token"]
+public_endpoints: list[str] = ["/", "/openapi.json", "/v1/auth/login", "/v1/auth/register"]
 
 
 log_level = "DEBUG"
@@ -53,23 +53,22 @@ async def add_process_time_header(request: Request, call_next):
     response: Response = await call_next(request)
     process_time = time.perf_counter() - start_time
     response.headers["X-Process-Time"] = str(process_time)
-
     if request.url.path not in public_endpoints:
         token: str = request.headers.get("Authorization")
         if not token:
             logger.info(
-                f"{request.method} {request.url.path} {401} {"Missing token"}  {process_time}"
+                f"{request.method} {request.url.path} {401} {"Missing token"}  {process_time}"  # noqa: E501
             )
             return JSONResponse(status_code=401, content={"detail": "Missing token"})
         if "Bearer " not in token:
             logger.info(
-                f"{request.method} {request.url.path} {401} {"Invalid token"}  {process_time}"
+                f"{request.method} {request.url.path} {401} {"Invalid token"}  {process_time}"  # noqa: E501
             )
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
         token = token.split("Bearer ")[1]
         if not verify_jwt_token(token):
             logger.info(
-                f"{request.method} {request.url.path} {401} {"Invalid token"}  {process_time}"
+                f"{request.method} {request.url.path} {401} {"Invalid token"}  {process_time}"  # noqa: E501
             )
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
