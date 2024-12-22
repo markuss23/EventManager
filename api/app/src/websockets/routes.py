@@ -1,13 +1,12 @@
 import asyncio
 from datetime import datetime, timedelta
 import json
-from typing import Annotated, LiteralString
+from typing import Annotated
 from app.databases import get_mongo_client, get_redis_client
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket 
 from loguru import logger
 from pymongo import MongoClient
-from pymongo.synchronous.collection import Collection
 from redis import Redis
 
 
@@ -38,7 +37,7 @@ async def monitor_reminders(
             events = mongo["events"].find({"attendees": {"$in": [user_id]}})
             for event in events:
                 event_id = str(event["_id"])
-                reminders_key = f"event:{event_id}:reminders"
+                reminders_key = f"event_r:{event_id}:reminders"
                 # Get reminders from event data
                 event_reminders = event.get("reminders", [])
                 # Calculate upcoming reminders based on event start time

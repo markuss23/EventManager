@@ -17,11 +17,18 @@ class Event(BaseModel):
     description: str
     creator: str = Field(default_factory=uuid.uuid4)
     attendees: list[str] = []
-    reminders: list[Reminder] = []  
-    
+    reminders: list[Reminder] = []
+
     @field_validator("event_id", mode="before")
     @classmethod
     def transform_id(cls, value) -> str:
+        if not isinstance(value, str):
+            return str(value)   
+        return value
+    
+    @field_validator("creator", mode="before")
+    @classmethod
+    def transform_creator(cls, value) -> str:
         if not isinstance(value, str):
             return str(value)   
         return value
@@ -40,8 +47,7 @@ class EventCreate(BaseModel):
     attendees: list[str] = []
     reminders: list[Reminder] = [
         Reminder(reminder_time=15, reminder_text="15 minutes before"),
-        ]  # Připomenutí v minutách před začátkem
+    ]  # Připomenutí v minutách před začátkem
 
 
-class EventUpdate(EventCreate):
-    ...
+class EventUpdate(EventCreate): ...

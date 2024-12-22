@@ -12,16 +12,18 @@ router = APIRouter(prefix="/events", tags=["events"])
 @router.get("/", response_model=list[Event], summary="Get all events")
 def endp_get_events(
     mongo: Annotated[get_mongo_client, Depends()],
+    redis: Annotated[get_redis_client, Depends()],
 ) -> list[Event]:
-    return get_events(mongo=mongo)
+    return get_events(mongo=mongo, redis=redis)
 
 
 @router.get("/{event_id}", response_model=Event, summary="Get event by ID")
 def endp_get_event(
     event_id: ID_PATH_ANNOTATION,
     mongo: Annotated[get_mongo_client, Depends()],
+    redis: Annotated[get_redis_client, Depends()],
 ) -> Event:
-    return get_event(event_id=event_id, mongo=mongo)
+    return get_event(event_id=event_id, mongo=mongo, redis=redis)
 
 
 @router.post("/", response_model=Event, summary="Create a new event")
@@ -38,5 +40,6 @@ def endp_update_event(
     event_id: ID_PATH_ANNOTATION,
     data: EventCreate,
     mongo: Annotated[get_mongo_client, Depends()],
+    redis: Annotated[get_redis_client, Depends()],
 ) -> Event:
     return update_event(data=data, mongo=mongo, event_id=event_id)
