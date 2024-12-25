@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, Button, Modal, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Modal,
+  TextField,
+  Typography,
+  ListItem,
+  IconButton,
+  List,
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
+import { API_URL } from "../../variables";
+import UserContext from "../../context/UserContext";
 
 const CreateEventStyle = {
   position: "absolute",
@@ -18,11 +30,17 @@ const CreateEventStyle = {
   p: 4,
 };
 
-function CreateEvent({ open, handleClose, onCreate }) {
+function CreateEvent({ open, handleClose }) {
+  const user = useContext(UserContext);
+
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState(dayjs());
   const [endTime, setEndTime] = useState(dayjs());
+  const [reminders, setReminders] = useState([]); // Stav pro pole připomenutí
+  const [newReminderTime, setNewReminderTime] = useState("");
+  const [newReminderText, setNewReminderText] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -31,14 +49,42 @@ function CreateEvent({ open, handleClose, onCreate }) {
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       description,
-      owner_id: "670ebab70ee831bcf8c4c924", // You can replace this with the actual owner ID
+      creator: user.user._id, 
       attendees: [],
-    };
+      reminders,
+    };    
+    fetch(`${API_URL}/events/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.user.token}`,
 
-    // Call the parent callback to create the event
-    onCreate(eventObject);
+      },
+      body: JSON.stringify(eventObject),
+    })
+      .then((response) => {
+        if (response.ok) {
+          handleClose();
+        } else {
+          throw new Error("Failed to create event.");
+        }
+      })
 
     handleClose(); // Close the modal after submission
+  };
+
+  const handleAddReminder = () => {
+    if (newReminderTime && newReminderText) {
+      setReminders([...reminders, { reminder_time: newReminderTime, reminder_text: newReminderText }]);
+      setNewReminderTime("");
+      setNewReminderText("");
+    }
+  };
+
+  const handleDeleteReminder = (index) => {
+    const updatedReminders = [...reminders];
+    updatedReminders.splice(index, 1);
+    setReminders(updatedReminders);
   };
 
   return (
@@ -86,6 +132,38 @@ function CreateEvent({ open, handleClose, onCreate }) {
               />
             </div>
           </LocalizationProvider>
+
+          <Typography variant="subtitle1" sx={{ mt: 2 }}>Reminders:</Typography>
+          <div>
+            <TextField
+              label="Reminder Time (minutes)"
+              type="number"
+              value={newReminderTime}
+              onChange={(e) => setNewReminderTime(e.target.value)}
+              sx={{ mr: 1, width: '40%' }}
+            />
+            <TextField
+              label="Reminder Text"
+              value={newReminderText}
+              onChange={(e) => setNewReminderText(e.target.value)}
+              sx={{ width: '50%' }}
+            />
+            <Button variant="contained" onClick={handleAddReminder} sx={{ ml: 1, mt:1 }}>
+              Add Reminder
+            </Button>
+          </div>
+          <List>
+            {reminders.map((reminder, index) => (
+              <ListItem key={index} secondaryAction={
+                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteReminder(index)}>
+                  <DeleteIcon />
+                </IconButton>
+              }>
+                {reminder.time} minutes before: {reminder.text}
+              </ListItem>
+            ))}
+          </List>
+
           <div
             style={{ display: "flex", justifyContent: "space-between", mx: 5 }}
           >
@@ -105,7 +183,7 @@ function CreateEvent({ open, handleClose, onCreate }) {
 CreateEvent.propTypes = {
   open: PropTypes.bool.isRequired,
   handleClose: PropTypes.func.isRequired,
-  onCreate: PropTypes.func.isRequired, // Expect a function to be passed for event creation
+  onCreate: PropTypes.func.isRequired,
 };
 
 export default CreateEvent;

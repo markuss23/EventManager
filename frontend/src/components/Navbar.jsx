@@ -9,13 +9,15 @@ import LogIn from "./modals/LogIn";
 import UserContext from "../context/UserContext";
 import UserDrawer from "./drawers/UserDrawer";
 import { Link } from "react-router-dom";
-
+import AddTaskIcon from "@mui/icons-material/AddTask";
+import CreateEvent from "./modals/CreateEvent";
 
 export default function Navbar() {
   const user = useContext(UserContext);
-
+  
   const [openLogIn, setOpenLogIn] = useState(false);
   const [openUserDrawer, setOpenUserDrawer] = useState(false);
+  const [openCreateEvent, setOpenCreateEvent] = useState(false);
 
   const handleOpenUserDrawer = () => {
     setOpenUserDrawer(true);
@@ -33,6 +35,14 @@ export default function Navbar() {
     setOpenLogIn(false);
   };
 
+  const handleOpenCreateEvent = () => {
+    setOpenCreateEvent(true);
+  };
+
+  const handleCloseCreateEvent = () => {
+    setOpenCreateEvent(false);
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
@@ -46,15 +56,19 @@ export default function Navbar() {
           >
             <MenuIcon />
           </IconButton>
-          <Link to="/" style={{
-            textDecoration: "none",
-            color: "white",
-            flexGrow: 1
-          }}>
-            <Button color="inherit">
-              Home
-            </Button>
+          <Link
+            to="/"
+            style={{
+              textDecoration: "none",
+              color: "white",
+              flexGrow: 1,
+            }}
+          >
+            <Button color="inherit">Home</Button>
           </Link>
+          <IconButton color="inherit" onClick={handleOpenCreateEvent}>
+            <AddTaskIcon/>
+          </IconButton>
           {user.user ? (
             <Button onClick={handleOpenUserDrawer} color="inherit">
               {" "}
@@ -72,6 +86,8 @@ export default function Navbar() {
             handleClose={handleCloseUserDrawer}
           />
           <LogIn open={openLogIn} handleClose={handleCloseLogIn} />
+          <CreateEvent open={openCreateEvent} handleClose={handleCloseCreateEvent} />
+
         </Toolbar>
       </AppBar>
     </Box>

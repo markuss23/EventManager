@@ -2,11 +2,10 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import UserContext from "./context/UserContext";
 import { useState } from "react";
-import Home from "./Home";
-import EventDetail from "./components/events/EventDetail";
 import { Box, Container, Typography } from "@mui/material";
 import GetAlertRender from "./utils";
-
+import EventsPage from "./pages/EventsPage";
+import EventsDetailPage from "./pages/EventDetailPage";
 function App() {
   const [user, setUser] = useState(null); // null to represent not logged in
 
@@ -29,8 +28,8 @@ function App() {
           {getUser(user)}
           {user && (
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/events/:id" element={<EventDetail />} />
+              <Route path="/" element={<EventsPage />} />
+              <Route path="/:id" element={<EventsDetailPage />} />
             </Routes>
           )}
           <Box

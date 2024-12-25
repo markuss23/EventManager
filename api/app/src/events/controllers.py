@@ -11,34 +11,39 @@ from app.src.events.schemas import Event, EventCreate, EventUpdate
 from redis import Redis
 
 
-def get_events(mongo: MongoClient, redis: Redis) -> list[Event]:
+def get_events(
+    mongo: MongoClient, redis: Redis, attend: list | None = None
+) -> list[Event]:
     try:
-        event_keys = redis.keys("event:*")
-        if event_keys:
-            events_data = [json.loads(redis.get(key)) for key in event_keys]
-            events_data = [
-                {
-                    "event_id": str(event.get("event_id")),  # Use .get to avoid KeyError
-                    "creator": str(event.get("creator")), # Convert creator to string
-                    **event
-                }
-                for event in events_data
-            ]
-            return [Event(**event) for event in events_data]
+        # event_keys = redis.keys("event:*")
+        # if event_keys:
+        #     events_data = [json.loads(redis.get(key)) for key in event_keys]
+        #     events_data = [
+        #         {
+        #             "event_id": str(event.get("event_id")),  # Use .get to avoid KeyError
+        #             "creator": str(event.get("creator")), # Convert creator to string
+        #             **event
+        #         }
+        #         for event in events_data
+        #     ]
+        #     return [Event(**event) for event in events_data]
 
         collection: Collection = mongo["events"]
         events: Cursor = collection.find()
+        
+        if attend:
+            events = collection.find({"attendees": {"$in": attend}})
+        
         events_list: list[Event] = [Event(**event) for event in events]
 
-        for event in events_list:
-            event_key = f"event:{event.event_id}"
-            redis.set(event_key, event.model_dump_json(), ex=3600)
+        # for event in events_list:
+        #     event_key = f"event:{event.event_id}"
+        #     redis.set(event_key, event.model_dump_json(), ex=3600)
 
         return events_list
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
-
 
 
 def get_event(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
