@@ -19,7 +19,7 @@ function EventsPage() {
 
   useEffect(() => {
     const fetchEvents = () => {
-        fetch(`${API_URL}/events?attend=${user.user._id}`, {
+        fetch(`${API_URL}/events/?attend=${user.user._id}`, {
             headers: {
                 Authorization: `Bearer ${user.user.token}`,
             },

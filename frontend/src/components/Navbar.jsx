@@ -7,7 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogIn from "./modals/LogIn";
 import UserContext from "../context/UserContext";
-import UserDrawer from "./drawers/UserDrawer";
+import UserDrawer from "./features/UserDrawer";
 import { Link } from "react-router-dom";
 import AddTaskIcon from "@mui/icons-material/AddTask";
 import CreateEvent from "./modals/CreateEvent";
@@ -66,13 +66,12 @@ export default function Navbar() {
           >
             <Button color="inherit">Home</Button>
           </Link>
-          <IconButton color="inherit" onClick={handleOpenCreateEvent}>
-            <AddTaskIcon/>
-          </IconButton>
+            <IconButton color="inherit" onClick={handleOpenCreateEvent}>
+              <AddTaskIcon />
+            </IconButton>
           {user.user ? (
             <Button onClick={handleOpenUserDrawer} color="inherit">
-              {" "}
-              {user.user.username}{" "}
+              {user.user.username}
             </Button>
           ) : (
             <>
@@ -81,13 +80,18 @@ export default function Navbar() {
               </Button>
             </>
           )}
-          <UserDrawer
-            open={openUserDrawer}
-            handleClose={handleCloseUserDrawer}
-          />
+          {user.user && (
+            <UserDrawer
+              open={openUserDrawer}
+              handleClose={handleCloseUserDrawer}
+              user={user.user}
+            />
+          )}
           <LogIn open={openLogIn} handleClose={handleCloseLogIn} />
-          <CreateEvent open={openCreateEvent} handleClose={handleCloseCreateEvent} />
-
+          <CreateEvent
+            open={openCreateEvent}
+            handleClose={handleCloseCreateEvent}
+          />
         </Toolbar>
       </AppBar>
     </Box>

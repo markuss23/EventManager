@@ -56,6 +56,7 @@ async def monitor_reminders(
                                 json.dumps(
                                     {
                                         "event_id": event_id,
+                                        "event_title": event["title"],
                                         "reminder_text": rem["reminder_text"],
                                         "type": "reminder",
                                     }
@@ -83,6 +84,8 @@ async def monitor_reminders(
     except Exception as e:
         logger.info(f"Error in reminder monitoring: {e}")
     finally:
+        await websocket.close()  # Close connection only once, after loop exits
+
         logger.info(f"Reminder monitoring stopped for user {user_id}")
 
 
@@ -93,31 +96,36 @@ async def websocket_endpoint(
     redis: Annotated[get_redis_client, Depends()],
     mongo: Annotated[get_mongo_client, Depends()],
 ) -> None:
+    is_closed = False  # Flag to track WebSocket closure
+
     try:
         if mongo["users"].find_one({"_id": ObjectId(user_id)}) is None:
-            await websocket.close(
-                code=1000, reason="User not found"
-            )  # Close with proper code
+            await websocket.close(code=1000, reason="User not found")
+            is_closed = True
             return
 
         await websocket.accept()
         logger.info(f"WebSocket connection established for user {user_id}")
-        events = (
-            mongo["events"].find({"attendees": {"$in": [user_id]}}).to_list(length=None)
-        )
+
+        events = mongo["events"].find({"attendees": {"$in": [user_id]}})
         if not events:
             await websocket.send_text(
                 json.dumps({"type": "message", "content": "Nemáte žádné události"})
             )
             await websocket.close()
+            is_closed = True
             return
 
-        await monitor_reminders(websocket, user_id, redis, mongo)  # Start monitoring
-        await websocket.receive()  # Keep connection alive
+        await monitor_reminders(websocket, user_id, redis, mongo)
+
+        # Keep the connection alive to receive data
+        await websocket.receive()
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
 
     finally:
-        logger.error(f"WebSocket connection closed for user {user_id}")
-        await websocket.close()
+        if not is_closed:
+            logger.info(f"Closing WebSocket connection for user {user_id}")
+            await websocket.close()
+            is_closed = True

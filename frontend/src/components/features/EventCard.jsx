@@ -11,11 +11,17 @@ import PropTypes from "prop-types";
 import { getEventStatus } from "../../utils";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import EventIcon from "@mui/icons-material/Event";
+import { useNavigate } from "react-router-dom";
 
 export const EventCard = ({ event }) => {
   const status = getEventStatus(event);
   const startTime = new Date(event.start_time);
   const endTime = new Date(event.end_time);
+  const navigate = useNavigate();
+
+  const handleGoToDetail = (messageId) => {
+    navigate(`/${messageId}`); // Navigace na detail
+  };
 
   return (
     <Card
@@ -80,11 +86,10 @@ export const EventCard = ({ event }) => {
           </Typography>
         </Box>
         <CardActions sx={{ p: 0, mt: 1, justifyContent: "flex-end" }}>
-          <Button size="small" color="primary" href={`/${event._id}`}>
+          <Button size="small" color="primary" onClick={() => handleGoToDetail(event._id)}>
             View Details
           </Button>
         </CardActions>
-
       </Box>
     </Card>
   );
