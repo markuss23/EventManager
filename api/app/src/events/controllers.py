@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import json
-from app.src.users.schemas import User, UserCreator
+from app.src.users.schemas import UserCreator
 from bson import ObjectId
 from fastapi import HTTPException
 from loguru import logger
@@ -127,14 +127,27 @@ def get_event_users(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
         Event: pydantic model for event
     """
     try:
-        # Check if event exists in Redis
-        # event_data = redis.get(f"event:{event_id}")
-        # if event_data:
-        #     res = json.loads(event_data)
-        #     res["event_id"] = str(res["event_id"])
-        #     return Event(**res)
+        cache_key = f"event:{event_id}"
+        cached_event = redis.get(cache_key)
+
+        if cached_event:
+            # If cached, parse and return the cached event data
+            event_data = json.loads(cached_event)
+            attendees = [UserCreator(**att) for att in event_data["attendees"]]
+            return EventAttendees(
+                event_id=event_data["event_id"],
+                title=event_data["title"],
+                start_time=event_data["start_time"],
+                end_time=event_data["end_time"],
+                description=event_data["description"],
+                creator=event_data["creator"],
+                attendees=attendees,
+                reminders=event_data["reminders"],
+            )
 
         collection: Collection = mongo["events"]
+        if not ObjectId.is_valid(event_id):
+            raise HTTPException(status_code=400, detail="Invalid event ID")
         event: dict | None = collection.find_one({"_id": ObjectId(event_id)})
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
@@ -169,11 +182,9 @@ def get_event_users(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
             description=collection[0]["description"],
             creator=collection[0]["creator"],
             attendees=attendees,
-        ) 
-
-        # event_key = f"event:{res.event_id}"  # Assuming Event has an id field
-        # redis.set(event_key, res.model_dump_json(), ex=3600)  # Cache for 1 hour
-
+            reminders=collection[0]["reminders"],
+        )
+        redis.set(cache_key, res.model_dump_json(), ex=360)
         return res
     except HTTPException as e:
         raise e
@@ -213,7 +224,7 @@ def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
 
         if data.creator not in data.attendees:
             data.attendees.append(data.creator)
-            
+
         data.attendees = [ObjectId(attendee) for attendee in data.attendees]
         if collection.find_one({"title": data.title}):
             raise HTTPException(
@@ -242,7 +253,9 @@ def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-def update_event(event_id: str, data: EventUpdate, mongo: MongoClient) -> Event:
+def update_event(
+    event_id: str, data: EventUpdate, mongo: MongoClient, redis: Redis
+) -> Event:
     try:
         # Validate creator and attendees
         if not ObjectId.is_valid(data.creator):
@@ -260,7 +273,8 @@ def update_event(event_id: str, data: EventUpdate, mongo: MongoClient) -> Event:
         ):
             raise HTTPException(status_code=404, detail="Attendee not found")
         if data.creator not in data.attendees:
-            data.attendees.append(data.creator)
+            data.attendees.append(ObjectId(data.creator))
+        data.attendees = [ObjectId(attendee) for attendee in data.attendees]
 
         collection: Collection = mongo["events"]
 
@@ -280,7 +294,24 @@ def update_event(event_id: str, data: EventUpdate, mongo: MongoClient) -> Event:
         )
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
+        redis.delete(f"event:{event_id}")
         return Event(**event)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+def delete_event(event_id: str, mongo: MongoClient, redis: Redis) -> None:
+    try:
+        collection: Collection = mongo["events"]
+        event: dict | None = collection.find_one({"_id": ObjectId(event_id)})
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        collection.delete_one({"_id": ObjectId(event_id)})
+        redis.delete(f"event:{event_id}")
+        return {"detail": "Event deleted successfully"}
     except HTTPException as e:
         raise e
     except Exception as e:

@@ -19,7 +19,7 @@ import EditEvent from "../modals/EditEvent";
 import { useState, useRef } from "react";
 import { APP_URL } from "../../variables";
 
-const EventDetail = ({ event, eventID }) => {
+const EventDetail = ({ event, eventID, onDelete }) => {
   const startTime = new Date(event.start_time);
   const endTime = new Date(event.end_time);
   const duration = differenceInMinutes(endTime, startTime);
@@ -88,6 +88,12 @@ const EventDetail = ({ event, eventID }) => {
     return attendees.length > 0
       ? attendees.map((attendee) => attendee.username).join(", ")
       : "No attendees";
+  };
+
+  const handleDeleteEvent = () => {
+    if (onDelete) {
+      onDelete(eventID);
+    }
   };
 
   return (
@@ -170,6 +176,13 @@ const EventDetail = ({ event, eventID }) => {
           >
             Edit
           </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteEvent}
+          >
+            Delete
+          </Button>
 
           <EditEvent
             open={openEditEvent}
@@ -234,6 +247,7 @@ const EventDetail = ({ event, eventID }) => {
 EventDetail.propTypes = {
   event: PropTypes.object.isRequired,
   eventID: PropTypes.string.isRequired,
+  onDelete: PropTypes.func,
 };
 
 export default EventDetail;

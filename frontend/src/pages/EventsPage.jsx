@@ -11,6 +11,7 @@ import {
   InputLabel,
   Checkbox,
   ListItemText,
+  TextField, // Import TextField
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import UserContext from "../context/UserContext";
@@ -23,6 +24,7 @@ function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState([]); // Default to no filters
+  const [searchQuery, setSearchQuery] = useState(""); // State for search query
   const user = useContext(UserContext);
 
   // Function to generate the query string based on the selected filters
@@ -71,6 +73,15 @@ function EventsPage() {
     setFilters(event.target.value);
   };
 
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  // Filter events based on the search query
+  const filteredEvents = events.filter((event) =>
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) // Assuming 'title' is the property for event titles
+  );
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" m={4}>
@@ -96,42 +107,52 @@ function EventsPage() {
 
         <Divider sx={{ mb: 4 }} />
 
-        <FormControl fullWidth>
-          <InputLabel>Filter Events</InputLabel>
-          <Select
-            multiple
-            value={filters}
-            onChange={handleFilterChange}
-            label="Filter Events"
-            renderValue={(selected) => selected.join(", ")}
-          >
-            <MenuItem value="current">
-              <Checkbox checked={filters.includes("current")} />
-              <ListItemText primary="Current" />
-            </MenuItem>
-            <MenuItem value="upcoming">
-              <Checkbox checked={filters.includes("upcoming")} />
-              <ListItemText primary="Upcoming" />
-            </MenuItem>
-            <MenuItem value="past">
-              <Checkbox checked={filters.includes("past")} />
-              <ListItemText primary="Past" />
-            </MenuItem>
-          </Select>
-        </FormControl>
+        <Box display="flex" justifyContent="space-between" mb={4}>
+          <FormControl fullWidth sx={{ mr: 2 }}>
+            <InputLabel>Filter Events</InputLabel>
+            <Select
+              multiple
+              value={filters}
+              onChange={handleFilterChange}
+              label="Filter Events"
+              renderValue={(selected) => selected.join(", ")}
+            >
+              <MenuItem value="current">
+                <Checkbox checked={filters.includes("current")} />
+                <ListItemText primary="Current" />
+              </MenuItem>
+              <MenuItem value="upcoming">
+                <Checkbox checked={filters.includes("upcoming")} />
+                <ListItemText primary="Upcoming" />
+              </MenuItem>
+              <MenuItem value="past">
+                <Checkbox checked={filters.includes("past")} />
+                <ListItemText primary="Past" />
+              </MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            label="Search by Title"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            variant="outlined"
+          />
+        </Box>
 
         <Divider sx={{ mb: 4 }} />
 
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div>
             {getAlertRender(
-              "No events match your filter. Create one now!",
+              "No events match your filter or search query. Create one now!",
               "info"
             )}
           </div>
         ) : (
           <Grid container spacing={2}>
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <Grid item xs={12} sm={6} md={4} key={event.id}>
                 <EventCard event={event} />
               </Grid>

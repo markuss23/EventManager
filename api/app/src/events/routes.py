@@ -5,7 +5,14 @@ from app.annotations import (
     INCLUDE_PASS_EVENT_ANNOTATION,
 )
 from app.databases import get_mongo_client, get_redis_client
-from app.src.events.controllers import create_event, get_event, get_event_users, get_events, update_event
+from app.src.events.controllers import (
+    create_event,
+    delete_event,
+    get_event,
+    get_event_users,
+    get_events,
+    update_event,
+)
 from fastapi import APIRouter, Depends
 from app.src.events.schemas import Event, EventAttendees, EventCreate
 
@@ -70,4 +77,13 @@ def endp_update_event(
     mongo: Annotated[get_mongo_client, Depends()],
     redis: Annotated[get_redis_client, Depends()],
 ) -> Event:
-    return update_event(data=data, mongo=mongo, event_id=event_id)
+    return update_event(data=data, mongo=mongo, event_id=event_id, redis=redis)
+
+
+@router.delete("/{event_id}", summary="delete event by ID")
+def endp_delete_event(
+    event_id: ID_PATH_ANNOTATION,
+    mongo: Annotated[get_mongo_client, Depends()],
+    redis: Annotated[get_redis_client, Depends()],
+):
+    return delete_event(mongo=mongo, event_id=event_id, redis=redis)
