@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+from app.src.users.schemas import User, UserCreator
 from bson import ObjectId
 from fastapi import HTTPException
 from loguru import logger
@@ -7,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.results import InsertOneResult
 from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.cursor import Cursor
-from app.src.events.schemas import Event, EventCreate, EventUpdate
+from app.src.events.schemas import Event, EventAttendees, EventCreate, EventUpdate
 from redis import Redis
 
 
@@ -25,7 +26,7 @@ def get_events(
         #     events_data = [json.loads(redis.get(key)) for key in event_keys]
         #     events_data = [
         #         {
-        #             "event_id": str(event.get("event_id")),  # Use .get to avoid KeyError
+        #             "event_id": str(event.get("event_id")),  # Use .get to avoid KeyError  # noqa: E501
         #             "creator": str(event.get("creator")), # Convert creator to string
         #             **event
         #         }
@@ -34,25 +35,40 @@ def get_events(
         #     return [Event(**event) for event in events_data]
 
         collection: Collection = mongo["events"]
-        events: Cursor = collection.find()
-        
+
+        # Initialize the query dictionary
+        query = {}
+
+        # Add attendance filter if provided
         if attend and len(attend) > 0:
-            events = collection.find({"attendees": {"$in": attend}})
-            
+            query["attendees"] = {"$in": [ObjectId(attendee) for attendee in attend]}
+
+        # Build time-based conditions
+        time_conditions = []
+
         if include_pass_event:
-            events = collection.find({"end_time": {"$lt": datetime.now()}})
-            
+            time_conditions.append({"end_time": {"$lt": datetime.now()}})
+
         if include_upcoming_event:
-            events = collection.find({"start_time": {"$gt": datetime.now()}})
-            
+            time_conditions.append({"start_time": {"$gt": datetime.now()}})
+
         if include_current_event:
-            events = collection.find(
+            time_conditions.append(
                 {
-                    "start_time": {"$lt": datetime.now()},
-                    "end_time": {"$gt": datetime.now()},
+                    "$and": [
+                        {"start_time": {"$lt": datetime.now()}},
+                        {"end_time": {"$gt": datetime.now()}},
+                    ]
                 }
             )
-        
+
+        # Combine time conditions with OR if multiple conditions exist
+        if time_conditions:
+            query["$or"] = time_conditions
+
+        # Execute the query
+        events: Cursor = collection.find(query)
+
         events_list: list[Event] = [Event(**event) for event in events]
 
         # for event in events_list:
@@ -100,6 +116,72 @@ def get_event(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
+def get_event_users(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
+    """Get event by ID joined with users.
+
+    Args:
+        event_id (str): Event ID
+        mongo (MongoClient): mongo client
+
+    Returns:
+        Event: pydantic model for event
+    """
+    try:
+        # Check if event exists in Redis
+        # event_data = redis.get(f"event:{event_id}")
+        # if event_data:
+        #     res = json.loads(event_data)
+        #     res["event_id"] = str(res["event_id"])
+        #     return Event(**res)
+
+        collection: Collection = mongo["events"]
+        event: dict | None = collection.find_one({"_id": ObjectId(event_id)})
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        pipeline = [
+            {"$match": {"_id": ObjectId(event_id)}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "attendees",
+                    "foreignField": "_id",
+                    "as": "attendees",
+                }
+            },
+        ]
+        collection = list(collection.aggregate(pipeline))
+        if not collection:
+            raise HTTPException(status_code=404, detail="Event not found")
+        attendees: list[UserCreator] = [
+            UserCreator(
+                **att,
+                creator=True
+                if ObjectId(att["_id"]) == ObjectId(collection[0]["creator"])
+                else False,
+            )
+            for att in collection[0]["attendees"]
+        ]
+        res = EventAttendees(
+            event_id=collection[0]["_id"],
+            title=collection[0]["title"],
+            start_time=collection[0]["start_time"],
+            end_time=collection[0]["end_time"],
+            description=collection[0]["description"],
+            creator=collection[0]["creator"],
+            attendees=attendees,
+        ) 
+
+        # event_key = f"event:{res.event_id}"  # Assuming Event has an id field
+        # redis.set(event_key, res.model_dump_json(), ex=3600)  # Cache for 1 hour
+
+        return res
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
 def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
     """Create a new event.
 
@@ -131,7 +213,8 @@ def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
 
         if data.creator not in data.attendees:
             data.attendees.append(data.creator)
-
+            
+        data.attendees = [ObjectId(attendee) for attendee in data.attendees]
         if collection.find_one({"title": data.title}):
             raise HTTPException(
                 status_code=409, detail="Event with title already exists"

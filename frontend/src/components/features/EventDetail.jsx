@@ -78,6 +78,18 @@ const EventDetail = ({ event, eventID }) => {
     }
   };
 
+  const getOrganizerName = () => {
+    const organizer = event.attendees.find((attendee) => attendee.creator);
+    return organizer ? organizer.username : "Not specified";
+  };
+
+  const getAttendees = () => {
+    const attendees = event.attendees.filter((attendee) => !attendee.creator);
+    return attendees.length > 0
+      ? attendees.map((attendee) => attendee.username).join(", ")
+      : "No attendees";
+  };
+
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Box
@@ -106,9 +118,7 @@ const EventDetail = ({ event, eventID }) => {
         <Typography variant="h6" gutterBottom>
           Description
         </Typography>
-        <Typography variant="body1" paragraph>
-          {event.description}
-        </Typography>
+        <Typography variant="body1">{event.description}</Typography>
         <Divider sx={{ my: 2 }} />
         <Typography variant="h6" gutterBottom>
           Organizer
@@ -116,7 +126,17 @@ const EventDetail = ({ event, eventID }) => {
         <Stack direction="row" alignItems="center" spacing={1} mb={2}>
           <PersonIcon color="action" fontSize="small" />
           <Typography variant="body1" color="text.secondary">
-            {event.creator}
+            {getOrganizerName(event)}
+          </Typography>
+        </Stack>
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="h6" gutterBottom>
+          Attendees
+        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+          <PersonIcon color="action" fontSize="small" />
+          <Typography variant="body1" color="text.secondary">
+            {getAttendees(event)}
           </Typography>
         </Stack>
         {event.reminders && event.reminders.length > 0 && (
@@ -143,7 +163,11 @@ const EventDetail = ({ event, eventID }) => {
           <Button variant="outlined" onClick={handleOpenShareModal}>
             Share
           </Button>
-          <Button variant="contained" color="warning" onClick={handleOpenEditEvent}>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleOpenEditEvent}
+          >
             Edit
           </Button>
 
@@ -181,10 +205,7 @@ const EventDetail = ({ event, eventID }) => {
           </Typography>
           <Divider sx={{ mb: 2 }} />
           <div ref={qrCodeRef}>
-            <QRCode
-              value={`${APP_URL}/event/${eventID}`}
-              size={300}
-            />
+            <QRCode value={`${APP_URL}/event/${eventID}`} size={300} />
           </div>
           <Button
             variant="contained"

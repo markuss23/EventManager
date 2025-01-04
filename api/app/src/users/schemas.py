@@ -10,13 +10,17 @@ class User(BaseModel):
     first_name: str
     last_name: str
     email: str
-    
+
     @field_validator("id", mode="before")
     @classmethod
     def transform_id(cls, value) -> str:
         if not isinstance(value, str):
-            return str(value)   
+            return str(value)
         return value
+
+
+class UserCreator(User):
+    creator: bool = False
 
 
 class UserCreate(BaseModel):
@@ -35,7 +39,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     username: str
     email: str
-    first_name: str 
+    first_name: str
     last_name: str
 
 

@@ -15,7 +15,7 @@ function EventsDetailPage() {
 
   useEffect(() => {
     const fetchEvents = () => {
-      fetch(`${API_URL}/events/${id}`, {
+      fetch(`${API_URL}/events/${id}/users`, {
         // Use the id in the API URL
         headers: {
           Authorization: `Bearer ${user.user.token}`,

@@ -5,9 +5,9 @@ from app.annotations import (
     INCLUDE_PASS_EVENT_ANNOTATION,
 )
 from app.databases import get_mongo_client, get_redis_client
-from app.src.events.controllers import create_event, get_event, get_events, update_event
+from app.src.events.controllers import create_event, get_event, get_event_users, get_events, update_event
 from fastapi import APIRouter, Depends
-from app.src.events.schemas import Event, EventCreate
+from app.src.events.schemas import Event, EventAttendees, EventCreate
 
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -39,6 +39,19 @@ def endp_get_event(
     redis: Annotated[get_redis_client, Depends()],
 ) -> Event:
     return get_event(event_id=event_id, mongo=mongo, redis=redis)
+
+
+@router.get(
+    "/{event_id}/users",
+    response_model=EventAttendees,
+    summary="Get event by ID joined with users",
+)
+def endp_get_event_users(
+    event_id: ID_PATH_ANNOTATION,
+    mongo: Annotated[get_mongo_client, Depends()],
+    redis: Annotated[get_redis_client, Depends()],
+) -> EventAttendees:
+    return get_event_users(event_id=event_id, mongo=mongo, redis=redis)
 
 
 @router.post("/", response_model=Event, summary="Create a new event")

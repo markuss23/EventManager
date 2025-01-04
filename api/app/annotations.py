@@ -18,7 +18,6 @@ ATTEND_ANNOTATION = Annotated[
     Query(
         title="Attend",
         description="Filter events by attendance status",
-        example="67680890d5a21a105bacb191",
     ),
 ]
 

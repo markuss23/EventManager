@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from app.src.users.schemas import User
+from app.src.users.schemas import User, UserCreator
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -16,21 +16,37 @@ class Event(BaseModel):
     end_time: datetime
     description: str
     creator: str = Field(default_factory=uuid.uuid4)
-    attendees: list[str] = []
+    attendees: list = []
     reminders: list[Reminder] = []
 
     @field_validator("event_id", mode="before")
     @classmethod
     def transform_id(cls, value) -> str:
         if not isinstance(value, str):
-            return str(value)   
+            return str(value)
         return value
-    
+
+    @field_validator("attendees", mode="before")
+    @classmethod
+    def transform_attendees(cls, value) -> str:
+        if len(value) > 0:
+            return [str(attendee) for attendee in value]
+        return value
+
     @field_validator("creator", mode="before")
     @classmethod
     def transform_creator(cls, value) -> str:
         if not isinstance(value, str):
-            return str(value)   
+            return str(value)
+        return value
+
+
+class EventAttendees(Event):
+    attendees: list[UserCreator]
+    
+    @field_validator("attendees", mode="before")
+    @classmethod
+    def transform_attendees(cls, value) -> str:
         return value
 
 
