@@ -9,9 +9,7 @@ from loguru import logger
 from pymongo import MongoClient
 from redis import Redis
 
-
 router = APIRouter(prefix="/ws")
-
 
 async def send_reminder_notification(websocket: WebSocket, reminder_text: str):
     """Sends a reminder notification over the WebSocket."""
@@ -34,10 +32,13 @@ async def monitor_reminders(
     """Monitors reminders for a user and sends notifications via WebSocket."""
     try:
         while True:  # Keep monitoring until WebSocket disconnects
-            events = mongo["events"].find({"attendees": {"$in": [user_id]}})
+            await websocket.send_text("test")
+            events = mongo["events"].find({"attendees": {"$in": [ObjectId(user_id)]}})
             for event in events:
                 event_id = str(event["_id"])
                 reminders_key = f"event_r:{event_id}:reminders"
+                sent_reminders_key = f"event_r:{event_id}:sent_reminders"
+
                 # Get reminders from event data
                 event_reminders = event.get("reminders", [])
                 # Calculate upcoming reminders based on event start time
@@ -50,7 +51,7 @@ async def monitor_reminders(
                         )
                         if reminder_time.replace(
                             second=0, microsecond=0
-                        ) == datetime.now().replace(second=0, microsecond=0):
+                        ) >= datetime.now().replace(second=0, microsecond=0):
                             # Reminder is upcoming and hasn't been sent yet
                             reminder_text: str = (
                                 json.dumps(
@@ -73,14 +74,17 @@ async def monitor_reminders(
                 upcoming_reminders.sort(key=lambda x: x[1])
 
                 for reminder, _rem_timestamp in upcoming_reminders:
-                    if await send_reminder_notification(
-                        websocket, reminder.decode("utf-8")
-                    ):
-                        redis.zrem(reminders_key, reminder)  # Remove after sending
-                    else:
-                        return  # Exit the loop if WebSocket is disconnected
+                    # Check if the reminder has already been sent
+                    if redis.zscore(sent_reminders_key, reminder) is None:
+                        if await send_reminder_notification(
+                            websocket, reminder.decode("utf-8")
+                        ):
+                            redis.zrem(reminders_key, reminder)  # Remove from reminders
+                            redis.zadd(sent_reminders_key, {reminder: _rem_timestamp})
+                        else:
+                            return  # Exit the loop if WebSocket is disconnected
 
-            await asyncio.sleep(60) 
+            await asyncio.sleep(30) 
     except Exception as e:
         logger.info(f"Error in reminder monitoring: {e}")
     finally:
@@ -107,7 +111,7 @@ async def websocket_endpoint(
         await websocket.accept()
         logger.info(f"WebSocket connection established for user {user_id}")
 
-        events = mongo["events"].find({"attendees": {"$in": [user_id]}})
+        events = mongo["events"].find({"attendees": {"$in": [ObjectId(user_id)]}})
         if not events:
             await websocket.send_text(
                 json.dumps({"type": "message", "content": "Nemáte žádné události"})

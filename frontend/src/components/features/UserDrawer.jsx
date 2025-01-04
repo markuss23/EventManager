@@ -37,9 +37,11 @@ function UserDrawer({ open, handleClose, user }) {
     };
 
     ws.current.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      message["seen"] = false;
-      setMessages((prevMessages) => [...prevMessages, message]);
+      if (event.data) {
+        const message = JSON.parse(event.data);
+        message["seen"] = false;
+        setMessages((prevMessages) => [...prevMessages, message]);
+      }
     };
 
     ws.current.onclose = () => {
@@ -113,6 +115,11 @@ function UserDrawer({ open, handleClose, user }) {
     handleClose();
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.reload();
+  };
+
   return (
     <Drawer
       open={open}
@@ -146,13 +153,21 @@ function UserDrawer({ open, handleClose, user }) {
           <div>
             <Typography>Username: {userDetail.username}</Typography>
             <Typography>First name: {userDetail.first_name}</Typography>
-            <Typography>last name: {userDetail.last_name}</Typography>
+            <Typography>Last name: {userDetail.last_name}</Typography>
           </div>
         )}
 
         <Typography variant="body2" color={wsConnected ? "green" : "red"}>
           WebSocket: {wsConnected ? "Connected" : "Disconnected"}
         </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleLogout}
+          sx={{ mt: 2 }}
+        >
+          Logout
+        </Button>
       </Box>
       <Divider sx={{ mb: 2 }} />
 
