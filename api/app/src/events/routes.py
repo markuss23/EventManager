@@ -1,5 +1,9 @@
 from typing import Annotated
-from app.annotations import ATTEND_ANNOTATION, ID_PATH_ANNOTATION
+from app.annotations import (
+    ATTEND_ANNOTATION,
+    ID_PATH_ANNOTATION,
+    INCLUDE_PASS_EVENT_ANNOTATION,
+)
 from app.databases import get_mongo_client, get_redis_client
 from app.src.events.controllers import create_event, get_event, get_events, update_event
 from fastapi import APIRouter, Depends
@@ -14,8 +18,18 @@ def endp_get_events(
     mongo: Annotated[get_mongo_client, Depends()],
     redis: Annotated[get_redis_client, Depends()],
     attend: ATTEND_ANNOTATION = None,
+    include_pass_event: INCLUDE_PASS_EVENT_ANNOTATION = False,
+    include_upcoming_event: INCLUDE_PASS_EVENT_ANNOTATION = False,
+    include_current_event: INCLUDE_PASS_EVENT_ANNOTATION = False,
 ) -> list[Event]:
-    return get_events(mongo=mongo, redis=redis, attend=attend)
+    return get_events(
+        mongo=mongo,
+        redis=redis,
+        attend=attend,
+        include_pass_event=include_pass_event,
+        include_upcoming_event=include_upcoming_event,
+        include_current_event=include_current_event,
+    )
 
 
 @router.get("/{event_id}", response_model=Event, summary="Get event by ID")

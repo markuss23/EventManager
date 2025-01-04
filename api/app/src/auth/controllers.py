@@ -21,7 +21,6 @@ def get_access_token(
 
         if not verify_password(data.password, user["password"]):
             raise HTTPException(status_code=401, detail="Invalid password")
-
         token: str = generate_jwt_token(
             str(user["_id"]),
             user["email"],

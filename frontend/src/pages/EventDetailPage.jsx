@@ -62,7 +62,7 @@ function EventsDetailPage() {
   return (
     <Container maxWidth="md">
       <Box my={4}>
-        <EventDetail event={event} />
+        <EventDetail event={event} eventID={id} />
       </Box>
     </Container>
   );

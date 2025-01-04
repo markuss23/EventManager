@@ -70,6 +70,9 @@ function LogIn({ open, handleClose }) {
       .then((data) => {
         const decoded = decodeJWT(data.access_token);
 
+        // Save token to localStorage
+        localStorage.setItem("token", data.access_token);
+
         // Update user context with decoded data
         setUser({
           username: decoded.username,

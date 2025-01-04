@@ -13,13 +13,12 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { API_URL } from "../../variables";
 import UserContext from "../../context/UserContext";
-
-const CreateEventStyle = {
+const EditEventStyle = {
   position: "absolute",
   top: "50%",
   left: "50%",
@@ -31,14 +30,16 @@ const CreateEventStyle = {
   p: 4,
 };
 
-function CreateEvent({ open, handleClose }) {
+function EditEvent({ open, handleClose, event, eventId }) {
   const user = useContext(UserContext);
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState(dayjs());
-  const [endTime, setEndTime] = useState(dayjs());
-  const [reminders, setReminders] = useState([]);
+    console.log(event.reminders);
+    
+  const [title, setTitle] = useState(event.title);
+  const [description, setDescription] = useState(event.description);
+  const [startTime, setStartTime] = useState(dayjs(event.start_time));
+  const [endTime, setEndTime] = useState(dayjs(event.end_time)
+  );
+  const [reminders, setReminders] = useState(event.reminders);
   const [newReminderTime, setNewReminderTime] = useState("");
   const [newReminderText, setNewReminderText] = useState("");
   const [error, setError] = useState("");
@@ -53,7 +54,9 @@ function CreateEvent({ open, handleClose }) {
     }
 
     if (title.length > 50 || title.length < 4) {
-      setError("Title should be less than 50 characters and more than 3 characters.");
+      setError(
+        "Title should be less than 50 characters and more than 3 characters."
+      );
       return;
     }
 
@@ -61,12 +64,11 @@ function CreateEvent({ open, handleClose }) {
       setError("Description should be less than 250 characters.");
       return;
     }
-      
+
     if (!startTime || !endTime) {
       setError("Please fill in the start and end time.");
       return;
     }
-
 
     if (startTime.isAfter(endTime)) {
       setError("End time should be after start time.");
@@ -77,13 +79,13 @@ function CreateEvent({ open, handleClose }) {
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       description,
-      creator: user.user._id,
+      creator: event.creator,
       attendees: [],
       reminders,
     };
 
-    fetch(`${API_URL}/events/`, {
-      method: "POST",
+    fetch(`${API_URL}/events/${eventId}`, {
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${user.user.token}`,
@@ -104,7 +106,8 @@ function CreateEvent({ open, handleClose }) {
             throw new Error(`Unexpected error: ${response.statusText}`);
           }
         }
-        return response.json();
+        // return response.json();
+        window.location.reload();
       })
       .then(() => {
         setTitle("");
@@ -115,7 +118,6 @@ function CreateEvent({ open, handleClose }) {
         setNewReminderTime("");
         setNewReminderText("");
         handleClose();
-
       })
       .catch((error) => {
         setError(error.message);
@@ -141,10 +143,10 @@ function CreateEvent({ open, handleClose }) {
 
   return (
     <Modal open={open} onClose={handleClose}>
-      <Box sx={CreateEventStyle}>
+      <Box sx={EditEventStyle}>
         <form onSubmit={handleSubmit}>
           <Typography variant="h6" component="h2">
-            Create Event
+            Edit Event
           </Typography>
 
           {error && (
@@ -252,8 +254,8 @@ function CreateEvent({ open, handleClose }) {
             <Button variant="contained" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained" color="success">
-              Create
+            <Button type="submit" variant="contained" color="warning">
+              Edit
             </Button>
           </div>
         </form>
@@ -262,9 +264,11 @@ function CreateEvent({ open, handleClose }) {
   );
 }
 
-CreateEvent.propTypes = {
-  open: PropTypes.bool.isRequired,
-  handleClose: PropTypes.func.isRequired,
+EditEvent.propTypes = {
+  open: PropTypes.bool,
+  handleClose: PropTypes.func,
+  event: PropTypes.object,
+  eventId: PropTypes.string,
 };
 
-export default CreateEvent;
+export default EditEvent;

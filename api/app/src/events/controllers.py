@@ -12,7 +12,12 @@ from redis import Redis
 
 
 def get_events(
-    mongo: MongoClient, redis: Redis, attend: list | None = None
+    mongo: MongoClient,
+    redis: Redis,
+    include_pass_event: bool = False,
+    include_upcoming_event: bool = False,
+    include_current_event: bool = False,
+    attend: list | None = None,
 ) -> list[Event]:
     try:
         # event_keys = redis.keys("event:*")
@@ -31,8 +36,22 @@ def get_events(
         collection: Collection = mongo["events"]
         events: Cursor = collection.find()
         
-        if attend:
+        if attend and len(attend) > 0:
             events = collection.find({"attendees": {"$in": attend}})
+            
+        if include_pass_event:
+            events = collection.find({"end_time": {"$lt": datetime.now()}})
+            
+        if include_upcoming_event:
+            events = collection.find({"start_time": {"$gt": datetime.now()}})
+            
+        if include_current_event:
+            events = collection.find(
+                {
+                    "start_time": {"$lt": datetime.now()},
+                    "end_time": {"$gt": datetime.now()},
+                }
+            )
         
         events_list: list[Event] = [Event(**event) for event in events]
 
@@ -115,7 +134,7 @@ def create_event(data: EventCreate, mongo: MongoClient, redis: Redis) -> Event:
 
         if collection.find_one({"title": data.title}):
             raise HTTPException(
-                status_code=400, detail="Event with title already exists"
+                status_code=409, detail="Event with title already exists"
             )
 
         event: InsertOneResult = collection.insert_one(data.model_dump())
@@ -144,11 +163,11 @@ def update_event(event_id: str, data: EventUpdate, mongo: MongoClient) -> Event:
     try:
         # Validate creator and attendees
         if not ObjectId.is_valid(data.creator):
-            raise HTTPException(status_code=400, detail="Invalid creator ID")
-
-        for attendee in data.attendees:
-            if not ObjectId.is_valid(attendee):
-                raise HTTPException(status_code=400, detail="Invalid attendee ID")
+            raise HTTPException(status_code=500, detail="Invalid creator ID")
+        if data.attendees:
+            for attendee in data.attendees:
+                if not ObjectId.is_valid(attendee):
+                    raise HTTPException(status_code=500, detail="Invalid attendee ID")
         # Check if creator and attendees exist
         if mongo["users"].find_one({"_id": ObjectId(data.creator)}) is None:
             raise HTTPException(status_code=404, detail="Creator not found")
@@ -168,7 +187,7 @@ def update_event(event_id: str, data: EventUpdate, mongo: MongoClient) -> Event:
         )
         if existing_event:
             raise HTTPException(
-                status_code=400, detail="Event with title already exists"
+                status_code=409, detail="Event with title already exists"
             )
         # Update event
         event: dict | None = collection.find_one_and_update(

@@ -17,14 +17,19 @@ def generate_jwt_token(
     algorithm="HS256",
     expiration_minutes=30,
 ) -> str:
-    """
-    Generate a JWT token.
+    """Generate a JWT token.
 
-    :param secret_key: The secret key to encode the JWT token.
-    :param user_id: The user ID to include in the token payload.
-    :param algorithm: The algorithm to use for encoding the token. Default is HS256.
-    :param expiration_minutes: The token expiration time in minutes. Default is 30 minutes.
-    :return: The encoded JWT token.
+    Args:
+        user_id (_type_): user id
+        username (_type_):  username
+        email (_type_): email
+        first_name (_type_): fisrt_name
+        last_name (_type_): last_name
+        algorithm (str, optional):algorithm . Defaults to "HS256".
+        expiration_minutes (int): token expiration . Defaults to 30.
+
+    Returns:
+        str: JWT token
     """
     payload = {
         "user_id": user_id,
@@ -69,7 +74,7 @@ def hash_password(password):
         return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     except Exception as e:
         logger.error(f"auth/utils/hash_password | {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 def verify_password(password, hashed_password):
@@ -84,4 +89,4 @@ def verify_password(password, hashed_password):
         return bcrypt.checkpw(password.encode("utf-8"), hashed_password)
     except Exception as e:
         logger.error(f"auth/utils/verify_password | {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -4,6 +4,7 @@ import {
   Typography,
   Box,
   CircularProgress,
+  Divider,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import UserContext from '../context/UserContext';
@@ -71,6 +72,8 @@ function EventsPage() {
         <Typography variant="h4" component="h1" gutterBottom>
           My Events
         </Typography>
+
+        <Divider sx={{ mb:4}} />
         
         {events.length === 0 ? (
         <div>

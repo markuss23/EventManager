@@ -66,9 +66,13 @@ export default function Navbar() {
           >
             <Button color="inherit">Home</Button>
           </Link>
-            <IconButton color="inherit" onClick={handleOpenCreateEvent}>
-              <AddTaskIcon />
-            </IconButton>
+          {
+            user.user && (
+              <Button onClick={handleOpenCreateEvent} color="inherit">
+                <AddTaskIcon />
+              </Button>
+            )
+          }
           {user.user ? (
             <Button onClick={handleOpenUserDrawer} color="inherit">
               {user.user.username}

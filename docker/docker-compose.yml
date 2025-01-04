@@ -5,6 +5,8 @@ services:
     build: ../api
     container_name: api
     restart: always
+    volumes:
+      - ../api:/code
     env_file:
       - ../api/.env
     ports:
@@ -15,6 +17,8 @@ services:
   frontend:
     build: ../frontend
     container_name: frontend
+    volumes:
+      - ../frontend:/app
     restart: always
     ports:
       - "3000:3000"

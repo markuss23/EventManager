@@ -21,3 +21,33 @@ ATTEND_ANNOTATION = Annotated[
         example="67680890d5a21a105bacb191",
     ),
 ]
+
+
+INCLUDE_PASS_EVENT_ANNOTATION = Annotated[
+    bool,
+    Query(
+        title="Include Pass Event",
+        description="Include pass events",
+        example=False,
+    ),
+]
+
+
+INCLUDE_UPCOMING_EVENT_ANNOTATION = Annotated[
+    bool,
+    Query(
+        title="Include upcoming Event",
+        description="Include upcoming events",
+        example=False,
+    ),
+]
+
+ 
+INCLUDE_CURRENT_EVENT_ANNOTATION = Annotated[
+    bool,
+    Query(
+        title="Include Current Event",
+        description="Include current events",
+        example=False,
+    ),
+]
