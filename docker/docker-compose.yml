@@ -11,15 +11,15 @@ services:
       - "8000:8000"
     networks:
       - event-manager
-  # # FIXME: frontend does not expose a port
-  # frontend:
-  #   build: ../frontend
-  #   container_name: frontend
-  #   restart: always
-  #   ports:
-  #     - "4137:4137"
-  #   networks:
-  #     - event-manager
+      
+  frontend:
+    build: ../frontend
+    container_name: frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - event-manager
 
   mongo:
     image: mongo

@@ -1,0 +1,9 @@
+# services:
+#   frontend:
+#     build: ../frontend
+#     container_name: frontend
+#     restart: always
+#     ports:
+#       - "30:4137"
+#     networks:
+#       - event-manager
