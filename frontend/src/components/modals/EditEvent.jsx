@@ -108,7 +108,6 @@ function EditEvent({ open, handleClose, event, eventId }) {
         
       });
     }
-    console.log("Attendees:", attendees_id_list);
     const eventObject = {
       title,
       start_time: startTime.utc(true).format(),
@@ -118,8 +117,6 @@ function EditEvent({ open, handleClose, event, eventId }) {
       attendees: attendees_id_list,
       reminders,
     };
-
-
 
     fetch(`${API_URL}/events/${eventId}`, {
       method: "PUT",
