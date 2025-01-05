@@ -104,6 +104,7 @@ function CreateEvent({ open, handleClose }) {
             throw new Error(`Unexpected error: ${response.statusText}`);
           }
         }
+        window.location.reload();
         return response.json();
       })
       .then(() => {

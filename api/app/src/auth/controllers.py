@@ -47,11 +47,16 @@ def register_user(data: UserCreate, mongo: MongoClient) -> dict[str, str] | None
     """
     try:
         collection: Collection = mongo["users"]
-        # Check if user with email already exists
+        # Check if user with email or username already exists
         user = collection.find_one({"email": data.email})
         if user:
             raise HTTPException(
-                status_code=400, detail="User with email already exists"
+                status_code=409, detail="User with email already exists"
+            )
+        user = collection.find_one({"username": data.username})
+        if user:
+            raise HTTPException(
+                status_code=409, detail="User with username already exists"
             )
         # If user with email does not exist, insert user into database
         user: InsertOneResult = collection.insert_one(data.model_dump(by_alias=True))

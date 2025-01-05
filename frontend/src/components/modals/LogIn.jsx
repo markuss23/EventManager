@@ -3,8 +3,9 @@ import { Alert, Box, Button, Modal, TextField } from "@mui/material";
 import { useContext, useState } from "react";
 import UserContext from "../../context/UserContext";
 import { API_URL } from "../../variables";
+import SignUp from "./SignUp"; // Import SignUp komponenty
 
-const LogInStyle = {
+const ModalStyle = {
   position: "absolute",
   top: "50%",
   left: "50%",
@@ -26,23 +27,23 @@ const decodeJWT = (token) => {
 };
 
 function LogIn({ open, handleClose }) {
-  const { setUser } = useContext(UserContext); // use context to update user state
-
+  const { setUser } = useContext(UserContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // Add error state
+  const [error, setError] = useState("");
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
 
     const formData = new URLSearchParams();
     formData.append("grant_type", "password");
     formData.append("username", email);
     formData.append("password", password);
     formData.append("scope", "");
-    formData.append("client_id", "string"); // Replace with your client_id
-    formData.append("client_secret", "string"); // Replace with your client_secret
+    formData.append("client_id", "string");
+    formData.append("client_secret", "string");
 
     fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -81,7 +82,6 @@ function LogIn({ open, handleClose }) {
           token: data.access_token,
         });
         handleClose();
-
       })
       .catch((error) => {
         setError(error.message);
@@ -90,46 +90,65 @@ function LogIn({ open, handleClose }) {
   };
 
   return (
-    <Modal open={open} onClose={handleClose}>
-      <Box sx={LogInStyle}>
-        <form onSubmit={handleSubmit}>
-        {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          <TextField
-            sx={{ mb: 2 }}
-            label="Email"
-            variant="filled"
-            required
-            fullWidth
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            sx={{ mb: 2 }}
-            label="Password"
-            variant="filled"
-            type="password"
-            required
-            fullWidth
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <div
-            style={{ display: "flex", justifyContent: "space-between", mx: 5 }}
-          >
-            <Button variant="contained" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="contained" color="success">
-              Signup
-            </Button>
-          </div>
-        </form>
-      </Box>
-    </Modal>
+    <>
+      <Modal open={open} onClose={handleClose}>
+        <Box sx={ModalStyle}>
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            <TextField
+              sx={{ mb: 2 }}
+              label="Email"
+              variant="filled"
+              required
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              sx={{ mb: 2 }}
+              label="Password"
+              variant="filled"
+              type="password"
+              required
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Button variant="contained" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => setIsSignUpOpen(true)}
+                color="secondary"
+              >
+                Sign Up
+              </Button>
+              <Button type="submit" variant="contained" color="success">
+                Login
+              </Button>
+              
+            </div>
+          </form>
+        </Box>
+      </Modal>
+
+      <SignUp
+        open={isSignUpOpen}
+        handleClose={() => setIsSignUpOpen(false)}
+      />
+    </>
   );
 }
 
