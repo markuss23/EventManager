@@ -99,16 +99,27 @@ function EditEvent({ open, handleClose, event, eventId }) {
       setError("User is not authenticated.");
       return;
     }
+    let attendees_id_list = []
 
+    if (attendees) {
+      attendees.forEach(element => {
+        console.log("Attendee:", element);
+        attendees_id_list.push(element.id);
+        
+      });
+    }
+    console.log("Attendees:", attendees_id_list);
     const eventObject = {
       title,
       start_time: startTime.utc(true).format(),
       end_time: endTime.utc(true).format(),
       description,
       creator: event.creator,
-      attendees: attendees.map((attendee) => attendee._id),
+      attendees: attendees_id_list,
       reminders,
     };
+
+
 
     fetch(`${API_URL}/events/${eventId}`, {
       method: "PUT",
