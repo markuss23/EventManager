@@ -1,0 +1,17 @@
+VITE_API_URL=
+VITE_WS_URL=
+VITE_APP_URL=
+
+mongo__host = 
+mongo__port = 27017
+mongo__db = "
+mongo__username = 
+mongo__password = 
+
+redis__host = 
+redis__port = 
+redis__db = 
+
+
+
+app__secret_key = ""

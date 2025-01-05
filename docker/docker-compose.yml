@@ -9,7 +9,7 @@ services:
       - ../api:/code
       - ../api/logs:/code/logs
     env_file:
-      - ../api/.env
+      - ../.env
     ports:
       - "8000:8000"
     networks:
@@ -21,6 +21,8 @@ services:
     volumes:
       - ../frontend:/app
     restart: always
+    env_file:
+      - ../.env
     ports:
       - "3000:3000"
     networks:
