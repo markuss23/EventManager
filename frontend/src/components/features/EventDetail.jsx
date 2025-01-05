@@ -189,7 +189,7 @@ const EventDetail = ({ event, eventID, onDelete }) => {
                   icon={<NotificationsActiveIcon />}
                   severity="info"
                 >
-                  {reminder.reminder_text}
+                  ({reminder.reminder_time} minutes) {reminder.reminder_text}
                 </Alert>
               ))}
             </Stack>
