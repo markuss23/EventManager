@@ -295,6 +295,17 @@ def update_event(
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
         redis.delete(f"event:{event_id}")
+
+        # Add updated reminders to Redis
+        for rem in event["reminders"]:
+            reminder_time: datetime = event["start_time"] - timedelta(
+                minutes=rem["reminder_time"]
+            )
+            if reminder_time > datetime.now():
+                redis.zadd(
+                    f"event_r:{event_id}",
+                    {event["title"]: reminder_time.timestamp()},
+                )
         return Event(**event)
     except HTTPException as e:
         raise e

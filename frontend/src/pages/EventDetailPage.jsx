@@ -5,6 +5,9 @@ import UserContext from "../context/UserContext";
 import getAlertRender from "../utils";
 import { API_URL } from "../variables";
 import EventDetail from "../components/features/EventDetail";
+import Grid from "@mui/material/Grid2";
+import { EventDetailChatRoom } from "../components/features/EventDetailChatRoom";
+
 function EventsDetailPage() {
   const { id } = useParams(); // Get the id from the URL parameters
   const [event, setEvent] = useState();
@@ -85,9 +88,22 @@ function EventsDetailPage() {
   }
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
+      {" "}
+      {/* Change maxWidth to lg for better layout */}
       <Box my={4}>
-        <EventDetail event={event} eventID={id} onDelete={handleDeleteEvent} />
+        <Grid container>
+          <Grid size={8}>
+          <EventDetail
+            event={event}
+            eventID={id}
+            onDelete={handleDeleteEvent}
+          />
+          </Grid>
+          <Grid size={4} mt={3}>
+          <EventDetailChatRoom event={event} eventId={id} />
+          </Grid>
+        </Grid>
       </Box>
     </Container>
   );

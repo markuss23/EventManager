@@ -19,6 +19,13 @@ import dayjs from "dayjs";
 import { API_URL } from "../../variables";
 import UserContext from "../../context/UserContext";
 
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.tz.setDefault('Europe/Prague');
+
 const CreateEventStyle = {
   position: "absolute",
   top: "50%",
@@ -36,8 +43,8 @@ function CreateEvent({ open, handleClose }) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState(dayjs());
-  const [endTime, setEndTime] = useState(dayjs());
+  const [startTime, setStartTime] = useState(dayjs().tz());
+  const [endTime, setEndTime] = useState(dayjs().tz());
   const [reminders, setReminders] = useState([]);
   const [newReminderTime, setNewReminderTime] = useState("");
   const [newReminderText, setNewReminderText] = useState("");
@@ -67,15 +74,14 @@ function CreateEvent({ open, handleClose }) {
       return;
     }
 
-
     if (startTime.isAfter(endTime)) {
       setError("End time should be after start time.");
       return;
     }
     const eventObject = {
       title,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
+      start_time: startTime.utc(true).format(),
+      end_time: endTime.utc(true).format(),
       description,
       creator: user.user._id,
       attendees: [],
@@ -110,13 +116,12 @@ function CreateEvent({ open, handleClose }) {
       .then(() => {
         setTitle("");
         setDescription("");
-        setStartTime(dayjs());
-        setEndTime(dayjs());
+        setStartTime(dayjs().tz());
+        setEndTime(dayjs().tz());
         setReminders([]);
         setNewReminderTime("");
         setNewReminderText("");
         handleClose();
-
       })
       .catch((error) => {
         setError(error.message);
@@ -179,15 +184,13 @@ function CreateEvent({ open, handleClose }) {
                 width: "100%",
               }}
             >
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <DateTimePicker
-                  label="Start Date"
-                  value={startTime}
-                  required
-                  onChange={(newValue) => setStartTime(newValue)}
-                  sx={{ mb: 2 }}
-                />
-              </LocalizationProvider>
+              <DateTimePicker
+                label="Start Date"
+                value={startTime}
+                required
+                onChange={(newValue) => setStartTime(newValue)}
+                sx={{ mb: 2 }}
+              />
               <DateTimePicker
                 label="End Date"
                 value={endTime}

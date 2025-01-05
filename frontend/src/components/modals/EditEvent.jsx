@@ -18,6 +18,14 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import { API_URL } from "../../variables";
 import UserContext from "../../context/UserContext";
+
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.tz.setDefault('Europe/Prague');
+
 const EditEventStyle = {
   position: "absolute",
   top: "50%",
@@ -76,8 +84,8 @@ function EditEvent({ open, handleClose, event, eventId }) {
     }
     const eventObject = {
       title,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
+      start_time: startTime.utc(true).format(),
+      end_time: endTime.utc(true).format(),
       description,
       creator: event.creator,
       attendees: [],

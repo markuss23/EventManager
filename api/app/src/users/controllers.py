@@ -6,6 +6,24 @@ from pymongo import MongoClient
 from pymongo.synchronous.collection import Collection
 
 
+def get_users(mongo: MongoClient) -> list[User]:
+    """Get all users.
+
+    Args:
+        mongo (MongoClient): mongo client
+
+    Returns:
+        list[User]: Pydantic model for users
+    """
+    try:
+        collection: Collection = mongo["users"]
+        users: list[dict] = list(collection.find())
+        return [User(**user) for user in users]
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
 def get_user(user_id: str, mongo: MongoClient) -> User:
     """Get user by ID.
 
@@ -27,11 +45,9 @@ def get_user(user_id: str, mongo: MongoClient) -> User:
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
-    
-    
-def update_user(
-    user_id: str, data: UserUpdate, mongo: MongoClient
-) -> dict | None:
+
+
+def update_user(user_id: str, data: UserUpdate, mongo: MongoClient) -> dict | None:
     """Update user by ID.
 
     Args:
@@ -57,4 +73,3 @@ def update_user(
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
-

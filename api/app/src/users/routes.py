@@ -1,11 +1,16 @@
 from typing import Annotated
 from app.annotations import ID_PATH_ANNOTATION
 from app.databases import get_mongo_client
-from app.src.users.controllers import get_user, update_user
+from app.src.users.controllers import get_user, get_users, update_user
 from app.src.users.schemas import User, UserUpdate
 from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/", response_model=list[User], summary="Get all users")
+def endp_get_users(mongo: Annotated[get_mongo_client, Depends()]) -> list[User]:
+    return list(get_users(mongo=mongo))
 
 
 @router.get("/{user_id}", response_model=User, summary="Get user by ID")

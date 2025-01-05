@@ -1,22 +1,23 @@
 import asyncio
+from collections import defaultdict
 from datetime import datetime, timedelta
 import json
 from typing import Annotated
+from uuid import uuid4
 from app.databases import get_mongo_client, get_redis_client
 from bson import ObjectId
-from fastapi import APIRouter, Depends, WebSocket 
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from loguru import logger
 from pymongo import MongoClient
 from redis import Redis
 
 router = APIRouter(prefix="/ws")
 
+
 async def send_reminder_notification(websocket: WebSocket, reminder_text: str):
     """Sends a reminder notification over the WebSocket."""
     try:
-        await websocket.send_text(
-            reminder_text
-        )
+        await websocket.send_text(reminder_text)
     except RuntimeError as e:
         if "WebSocket is not connected" in str(e):
             logger.info("WebSocket disconnected, stopping reminder sending.")
@@ -53,15 +54,13 @@ async def monitor_reminders(
                             second=0, microsecond=0
                         ) >= datetime.now().replace(second=0, microsecond=0):
                             # Reminder is upcoming and hasn't been sent yet
-                            reminder_text: str = (
-                                json.dumps(
-                                    {
-                                        "event_id": event_id,
-                                        "event_title": event["title"],
-                                        "reminder_text": rem["reminder_text"],
-                                        "type": "reminder",
-                                    }
-                                )
+                            reminder_text: str = json.dumps(
+                                {
+                                    "event_id": event_id,
+                                    "event_title": event["title"],
+                                    "reminder_text": rem["reminder_text"],
+                                    "type": "reminder",
+                                }
                             )
                             upcoming_reminders.append(
                                 (
@@ -84,7 +83,7 @@ async def monitor_reminders(
                         else:
                             return  # Exit the loop if WebSocket is disconnected
 
-            await asyncio.sleep(30) 
+            await asyncio.sleep(30)
     except Exception as e:
         logger.info(f"Error in reminder monitoring: {e}")
     finally:
@@ -133,3 +132,165 @@ async def websocket_endpoint(
             logger.info(f"Closing WebSocket connection for user {user_id}")
             await websocket.close()
             is_closed = True
+
+
+active_connections = defaultdict(
+    set
+)  # A dictionary to store active WebSocket connections by event_id
+
+
+@router.websocket("/chat/{event_id}")
+async def chat_websocket_endpoint(
+    websocket: WebSocket,
+    event_id: str,
+    mongo: Annotated[get_mongo_client, Depends()],
+):
+    """
+    WebSocket chat room for events. User details are sent in the first message.
+    """
+    if (
+        not ObjectId.is_valid(event_id)
+        or mongo["events"].find_one({"_id": ObjectId(event_id)}) is None
+    ):
+        await websocket.close(code=1000, reason="Event not found")
+        return
+
+    await websocket.accept()
+    first_message = await websocket.receive_text()
+    first_message = json.loads(first_message)
+
+    user_id = first_message.get("user_id")
+    user_name = first_message.get("name")
+
+    if not user_id or not user_name:
+        await websocket.close(code=1003, reason="Invalid user details")
+        return
+
+    if mongo["users"].find_one({"_id": ObjectId(user_id)}) is None:
+        await websocket.close(code=1000, reason="User not found")
+        return
+
+    if (
+        mongo["events"].find_one(
+            {"_id": ObjectId(event_id), "attendees": {"$in": [ObjectId(user_id)]}}
+        )
+        is None
+    ):
+        await websocket.close(code=1000, reason="User not in event")
+        return
+
+    collection = mongo["chat"]
+
+    # Load and send chat history
+    load_history = collection.find({"event_id": event_id}).sort("timestamp", -1)
+    load_history = list(load_history)
+    for message in load_history:
+        message["type"] = "load"
+        message["_id"] = str(message["_id"])
+        message["timestamp"] = message["timestamp"].isoformat()
+
+    await websocket.send_text(json.dumps(load_history))
+
+    # Add the current WebSocket connection to the active connections
+    active_connections[event_id].add(websocket)
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            data_object = json.loads(data)
+            if data_object["type"] == "message":
+                message = {
+                    "event_id": event_id,
+                    "user_id": user_id,
+                    "name": user_name,
+                    "message": data_object["message"],
+                    "timestamp": datetime.utcnow(),
+                }
+                collection.insert_one(message)
+                message["type"] = "message"
+                message["_id"] = str(message["_id"])
+                message["timestamp"] = message["timestamp"].isoformat()
+
+                # Broadcast the message to all connections for this event_id
+                for conn in active_connections[event_id]:
+                    await conn.send_text(json.dumps(message))
+
+    except WebSocketDisconnect:
+        # Remove the disconnected WebSocket from active connections
+        active_connections[event_id].remove(websocket)
+        if not active_connections[event_id]:
+            del active_connections[event_id]  # Clean up empty event_id entry
+    
+    # while True:
+    #     data = await websocket.receive_text()
+    #     logger.info(f"Received message: {data}")
+    #     data_object = json.loads(data)
+    #     logger.info(type(data_object))
+    #     logger.info(f"Received message: {data_object}")
+
+    # Verify if the event exists
+    # logger.info(f"Event ID: {event_id}")
+    # if (
+    #     not ObjectId.is_valid(event_id)
+    #     or mongo["events"].find_one({"_id": ObjectId(event_id)}) is None
+    # ):
+    #     await websocket.close(code=1000, reason="Event not found")
+    #     return
+    # logger.info(f"Event found: {event_id}")
+    # await websocket.accept()
+
+    # logger.info(f"Client connected: {websocket}")
+
+    # # try:
+    # while True:
+    #     logger.info("Waiting for user details")
+    #     first_message = await websocket.receive_json()
+    #     logger.info(f"First message: {first_message}")
+
+    #     # user_id = first_message.get("user_id")
+    #     # user_name = first_message.get("name")
+
+    #     # if not user_id or not user_name:
+    #     #     await websocket.close(code=1003, reason="Invalid user details")
+    #     #     return
+    #     # print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    #     # while True:
+    #     #     try:
+    #     #         # Receive message from the WebSocket
+    #     #         data = await websocket.receive_json()
+
+    #     #         message_text = data.get("message")
+    #     #         if not message_text:
+    #     #             await websocket.send_json({"error": "Empty message"})
+    #     #             continue
+
+    #     #         # Save the message to MongoDB
+    #     #         message = {
+    #     #             "event_id": event_id,
+    #     #             "user_id": user_id,
+    #     #             "name": user_name,
+    #     #             "message": message_text,
+    #     #             "timestamp": datetime.utcnow(),
+    #     #         }
+    #     #         collection.insert_one(message)
+
+    #     #         # Broadcast the message to all connected clients
+    #     #         for client in connected_clients:
+    #     #             if client != websocket:
+    #     #                 try:
+    #     #                     await client.send_json(message)
+    #     #                 except Exception as send_error:
+    #     #                     print(f"Error sending to client: {send_error}")
+    #     #                     connected_clients.remove(client)
+
+    #     # except Exception as receive_error:
+    #     #     print(f"Error receiving message: {receive_error}")
+    #     #     await websocket.send_json({"error": "Invalid message format"})
+    # # except WebSocketDisconnect:
+    # #     print("Client disconnected")
+    # #     connected_clients.remove(websocket)
+    # # except Exception as e:
+    # #     print(f"Unexpected error: {e}")
+    # #     await websocket.close(code=1011, reason=f"Unexpected error: {str(e)}")
+    # #     if websocket in connected_clients:
+    # #         connected_clients.remove(websocket)
