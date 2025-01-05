@@ -6,6 +6,7 @@ import { Box, Container, Typography } from "@mui/material";
 import GetAlertRender from "./utils";
 import EventsPage from "./pages/EventsPage";
 import EventsDetailPage from "./pages/EventDetailPage";
+import UserDetailPage from "./pages/UserDetailPage";
 
 function checkToken() {
   const token = localStorage.getItem("token");
@@ -61,6 +62,7 @@ function App() {
             <Routes>
               <Route path="/" element={<EventsPage />} />
               <Route path="/:id" element={<EventsDetailPage />} />
+              <Route path="users/:id" element={<UserDetailPage />} />
             </Routes>
           )}
           <Box sx={{ flexGrow: 1 }} />

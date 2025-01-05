@@ -133,6 +133,18 @@ def get_event_users(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
         if cached_event:
             # If cached, parse and return the cached event data
             event_data = json.loads(cached_event)
+            # for att in event_data["attendees"]:
+            #     logger.info(
+            #         UserCreator(
+            #             creator=att["creator"],
+            #             id=str(att["id"]),
+            #             username=att["username"],
+            #             first_name=att["first_name"],
+            #             last_name=att["last_name"],
+            #             email=att["email"],
+                        
+            #         )
+            #     )
             attendees = [UserCreator(**att) for att in event_data["attendees"]]
             return EventAttendees(
                 event_id=event_data["event_id"],
@@ -171,6 +183,7 @@ def get_event_users(event_id: str, mongo: MongoClient, redis: Redis) -> Event:
                 creator=True
                 if ObjectId(att["_id"]) == ObjectId(collection[0]["creator"])
                 else False,
+                id=str(att["_id"]),
             )
             for att in collection[0]["attendees"]
         ]

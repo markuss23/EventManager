@@ -20,7 +20,15 @@ class User(BaseModel):
 
 
 class UserCreator(User):
+    id: str
     creator: bool = False
+    
+    @field_validator("id", mode="before")
+    @classmethod
+    def transform_id(cls, value) -> str:
+        if not isinstance(value, str):
+            return str(value)
+        return value
 
 
 class UserCreate(BaseModel):

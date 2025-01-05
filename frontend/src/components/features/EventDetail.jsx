@@ -18,6 +18,7 @@ import QRCode from "react-qr-code"; // Import QR code library
 import EditEvent from "../modals/EditEvent";
 import { useState, useRef } from "react";
 import { APP_URL } from "../../variables";
+import { useNavigate } from "react-router-dom";
 
 const EventDetail = ({ event, eventID, onDelete }) => {
   const startTime = new Date(event.start_time);
@@ -26,7 +27,13 @@ const EventDetail = ({ event, eventID, onDelete }) => {
 
   const [openEditEvent, setOpenEditEvent] = useState(false);
   const [openShareModal, setOpenShareModal] = useState(false);
-  const qrCodeRef = useRef();
+  const qrCodeRef = useRef();  
+
+  const navigate = useNavigate();
+  
+    const handleGoToDetail = (messageId) => {
+      navigate(`/users/${messageId}`); // Navigace na detail
+    };
 
   const handleOpenEditEvent = () => {
     setOpenEditEvent(true);
@@ -83,18 +90,14 @@ const EventDetail = ({ event, eventID, onDelete }) => {
     return organizer ? organizer.username : "Not specified";
   };
 
-  const getAttendees = () => {
-    const attendees = event.attendees.filter((attendee) => !attendee.creator);
-    return attendees.length > 0
-      ? attendees.map((attendee) => attendee.username).join(", ")
-      : "No attendees";
-  };
-
   const handleDeleteEvent = () => {
     if (onDelete) {
       onDelete(eventID);
     }
   };
+
+  console.log(event.attendees);
+  
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
@@ -131,7 +134,12 @@ const EventDetail = ({ event, eventID, onDelete }) => {
         </Typography>
         <Stack direction="row" alignItems="center" spacing={1} mb={2}>
           <PersonIcon color="action" fontSize="small" />
-          <Typography variant="body1" color="text.secondary">
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            onClick={() => handleGoToDetail(event.creator)}
+            style={{ cursor: "pointer" }}
+          >
             {getOrganizerName(event)}
           </Typography>
         </Stack>
@@ -139,11 +147,31 @@ const EventDetail = ({ event, eventID, onDelete }) => {
         <Typography variant="h6" gutterBottom>
           Attendees
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          flexWrap="wrap"
+          mb={2}
+        >
           <PersonIcon color="action" fontSize="small" />
-          <Typography variant="body1" color="text.secondary">
-            {getAttendees(event)}
-          </Typography>
+          {event.attendees && event.attendees.length > 0 ? (
+            event.attendees.map((attendee) => (
+              <Typography
+                key={attendee.username}
+                variant="body1"
+                color="text.secondary"
+                onClick={() => handleGoToDetail(attendee.id)}
+                style={{ cursor: "pointer" }}
+              >
+                {attendee.username}
+              </Typography>
+            ))
+          ) : (
+            <Typography variant="body1" color="text.secondary">
+              No attendees
+            </Typography>
+          )}
         </Stack>
         {event.reminders && event.reminders.length > 0 && (
           <>
@@ -176,11 +204,7 @@ const EventDetail = ({ event, eventID, onDelete }) => {
           >
             Edit
           </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteEvent}
-          >
+          <Button variant="contained" color="error" onClick={handleDeleteEvent}>
             Delete
           </Button>
 
