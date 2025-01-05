@@ -144,7 +144,7 @@ async def chat_websocket_endpoint(
     websocket: WebSocket,
     event_id: str,
     mongo: Annotated[get_mongo_client, Depends()],
-):
+) -> None:
     """
     WebSocket chat room for events. User details are sent in the first message.
     """
@@ -220,77 +220,3 @@ async def chat_websocket_endpoint(
         active_connections[event_id].remove(websocket)
         if not active_connections[event_id]:
             del active_connections[event_id]  # Clean up empty event_id entry
-    
-    # while True:
-    #     data = await websocket.receive_text()
-    #     logger.info(f"Received message: {data}")
-    #     data_object = json.loads(data)
-    #     logger.info(type(data_object))
-    #     logger.info(f"Received message: {data_object}")
-
-    # Verify if the event exists
-    # logger.info(f"Event ID: {event_id}")
-    # if (
-    #     not ObjectId.is_valid(event_id)
-    #     or mongo["events"].find_one({"_id": ObjectId(event_id)}) is None
-    # ):
-    #     await websocket.close(code=1000, reason="Event not found")
-    #     return
-    # logger.info(f"Event found: {event_id}")
-    # await websocket.accept()
-
-    # logger.info(f"Client connected: {websocket}")
-
-    # # try:
-    # while True:
-    #     logger.info("Waiting for user details")
-    #     first_message = await websocket.receive_json()
-    #     logger.info(f"First message: {first_message}")
-
-    #     # user_id = first_message.get("user_id")
-    #     # user_name = first_message.get("name")
-
-    #     # if not user_id or not user_name:
-    #     #     await websocket.close(code=1003, reason="Invalid user details")
-    #     #     return
-    #     # print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    #     # while True:
-    #     #     try:
-    #     #         # Receive message from the WebSocket
-    #     #         data = await websocket.receive_json()
-
-    #     #         message_text = data.get("message")
-    #     #         if not message_text:
-    #     #             await websocket.send_json({"error": "Empty message"})
-    #     #             continue
-
-    #     #         # Save the message to MongoDB
-    #     #         message = {
-    #     #             "event_id": event_id,
-    #     #             "user_id": user_id,
-    #     #             "name": user_name,
-    #     #             "message": message_text,
-    #     #             "timestamp": datetime.utcnow(),
-    #     #         }
-    #     #         collection.insert_one(message)
-
-    #     #         # Broadcast the message to all connected clients
-    #     #         for client in connected_clients:
-    #     #             if client != websocket:
-    #     #                 try:
-    #     #                     await client.send_json(message)
-    #     #                 except Exception as send_error:
-    #     #                     print(f"Error sending to client: {send_error}")
-    #     #                     connected_clients.remove(client)
-
-    #     # except Exception as receive_error:
-    #     #     print(f"Error receiving message: {receive_error}")
-    #     #     await websocket.send_json({"error": "Invalid message format"})
-    # # except WebSocketDisconnect:
-    # #     print("Client disconnected")
-    # #     connected_clients.remove(websocket)
-    # # except Exception as e:
-    # #     print(f"Unexpected error: {e}")
-    # #     await websocket.close(code=1011, reason=f"Unexpected error: {str(e)}")
-    # #     if websocket in connected_clients:
-    # #         connected_clients.remove(websocket)

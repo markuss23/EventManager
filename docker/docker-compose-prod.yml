@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.prod
+    container_name: api
+    restart: always
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    networks:
+      - event-manager
+      
+  frontend:
+    build: 
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+    container_name: frontend
+    volumes:
+      - ../frontend:/app
+    restart: always
+    env_file:
+      - ../.env
+    ports:
+      - "3000:3000"
+    networks:
+      - event-manager
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - event-manager
+
+  redis:
+    image: redis
+    container_name: redis
+    command: ["redis-server", "--notify-keyspace-events", "Ex"]
+    ports:
+      - "6379:6379"
+    networks:
+      - event-manager
+
+networks:
+  event-manager:
+    driver: bridge

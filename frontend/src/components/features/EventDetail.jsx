@@ -90,13 +90,16 @@ const EventDetail = ({ event, eventID, onDelete }) => {
     return organizer ? organizer.username : "Not specified";
   };
 
+  const getAttendees = () => {
+    return event.attendees.filter((attendee) => !attendee.creator);
+  };
+
   const handleDeleteEvent = () => {
     if (onDelete) {
       onDelete(eventID);
     }
   };
 
-  console.log(event.attendees);
   
 
   return (
@@ -155,8 +158,8 @@ const EventDetail = ({ event, eventID, onDelete }) => {
           mb={2}
         >
           <PersonIcon color="action" fontSize="small" />
-          {event.attendees && event.attendees.length > 0 ? (
-            event.attendees.map((attendee) => (
+          {getAttendees().length > 0 ? (
+            getAttendees().map((attendee) => (
               <Typography
                 key={attendee.username}
                 variant="body1"
