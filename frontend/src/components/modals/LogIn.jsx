@@ -101,7 +101,7 @@ function LogIn({ open, handleClose }) {
             )}
             <TextField
               sx={{ mb: 2 }}
-              label="Email"
+              label="Username"
               variant="filled"
               required
               fullWidth

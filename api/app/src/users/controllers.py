@@ -1,9 +1,12 @@
+from functools import cache
+import json
 from app.src.users.schemas import User, UserUpdate
 from bson import ObjectId
 from fastapi import HTTPException
 from loguru import logger
 from pymongo import MongoClient
 from pymongo.synchronous.collection import Collection
+from redis import Redis
 
 
 def get_users(mongo: MongoClient) -> list[User]:
@@ -24,7 +27,7 @@ def get_users(mongo: MongoClient) -> list[User]:
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-def get_user(user_id: str, mongo: MongoClient) -> User:
+def get_user(user_id: str, mongo: MongoClient, redis: Redis) -> User:
     """Get user by ID.
 
     Args:
@@ -35,11 +38,23 @@ def get_user(user_id: str, mongo: MongoClient) -> User:
         User: Pydantic model for user
     """
     try:
+        cache_key: str = f"user:{user_id}"
+        cached_user: str | None = redis.get(cache_key)
+
+        if cached_user:
+            user = json.loads(cached_user)
+            return User(**user)
+
         collection: Collection = mongo["users"]
+
         user: dict | None = collection.find_one({"_id": ObjectId(user_id)})
+
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        return User(**user)
+        res = User(**user)
+            
+        redis.set(cache_key, res.model_dump_json())
+        return res
     except HTTPException as e:
         raise e
     except Exception as e:

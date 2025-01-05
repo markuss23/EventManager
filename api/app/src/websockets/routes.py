@@ -3,7 +3,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import json
 from typing import Annotated
-from uuid import uuid4
 from app.databases import get_mongo_client, get_redis_client
 from bson import ObjectId
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
