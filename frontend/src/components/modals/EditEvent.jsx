@@ -103,8 +103,13 @@ function EditEvent({ open, handleClose, event, eventId }) {
 
     if (attendees) {
       attendees.forEach(element => {
+        console.log(element);
+        
         if (element.id !== undefined && element.id !== null)
-          attendees_id_list.push(element.id);
+        attendees_id_list.push(element.id);
+
+        if (element._id !== undefined && element._id !== null)
+          attendees_id_list.push(element._id);
         
       });
     }
