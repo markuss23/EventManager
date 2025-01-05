@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
   Box,
@@ -10,6 +10,7 @@ import {
   IconButton,
   List,
   Alert,
+  Autocomplete,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -40,17 +41,30 @@ const EditEventStyle = {
 
 function EditEvent({ open, handleClose, event, eventId }) {
   const user = useContext(UserContext);
-    console.log(event.reminders);
-    
+
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
   const [startTime, setStartTime] = useState(dayjs(event.start_time));
-  const [endTime, setEndTime] = useState(dayjs(event.end_time)
-  );
+  const [endTime, setEndTime] = useState(dayjs(event.end_time));
   const [reminders, setReminders] = useState(event.reminders);
   const [newReminderTime, setNewReminderTime] = useState("");
   const [newReminderText, setNewReminderText] = useState("");
   const [error, setError] = useState("");
+  const [attendees, setAttendees] = useState(event.attendees || []);
+  const [allUsers, setAllUsers] = useState([]);
+
+  useEffect(() => {
+    if (user && user.user && user.user.token) {
+      fetch(`${API_URL}/users/`, {
+        headers: {
+          Authorization: `Bearer ${user.user.token}`,
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => setAllUsers(data))
+        .catch((error) => console.error("Error fetching users:", error));
+    }
+  }, [user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -62,9 +76,7 @@ function EditEvent({ open, handleClose, event, eventId }) {
     }
 
     if (title.length > 50 || title.length < 4) {
-      setError(
-        "Title should be less than 50 characters and more than 3 characters."
-      );
+      setError("Title should be less than 50 characters and more than 3 characters.");
       return;
     }
 
@@ -82,13 +94,19 @@ function EditEvent({ open, handleClose, event, eventId }) {
       setError("End time should be after start time.");
       return;
     }
+
+    if (!user || !user.user || !user.user.token) {
+      setError("User is not authenticated.");
+      return;
+    }
+
     const eventObject = {
       title,
       start_time: startTime.utc(true).format(),
       end_time: endTime.utc(true).format(),
       description,
       creator: event.creator,
-      attendees: [],
+      attendees: attendees.map((attendee) => attendee._id),
       reminders,
     };
 
@@ -114,8 +132,8 @@ function EditEvent({ open, handleClose, event, eventId }) {
             throw new Error(`Unexpected error: ${response.statusText}`);
           }
         }
-        // return response.json();
         window.location.reload();
+        return response.json();
       })
       .then(() => {
         setTitle("");
@@ -125,6 +143,7 @@ function EditEvent({ open, handleClose, event, eventId }) {
         setReminders([]);
         setNewReminderTime("");
         setNewReminderText("");
+        setAttendees([]);
         handleClose();
       })
       .catch((error) => {
@@ -188,15 +207,13 @@ function EditEvent({ open, handleClose, event, eventId }) {
                 width: "100%",
               }}
             >
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <DateTimePicker
-                  label="Start Date"
-                  value={startTime}
-                  required
-                  onChange={(newValue) => setStartTime(newValue)}
-                  sx={{ mb: 2 }}
-                />
-              </LocalizationProvider>
+              <DateTimePicker
+                label="Start Date"
+                value={startTime}
+                required
+                onChange={(newValue) => setStartTime(newValue)}
+                sx={{ mb: 2 }}
+              />
               <DateTimePicker
                 label="End Date"
                 value={endTime}
@@ -206,6 +223,25 @@ function EditEvent({ open, handleClose, event, eventId }) {
               />
             </div>
           </LocalizationProvider>
+
+          <Autocomplete
+            multiple
+            options={allUsers}
+            getOptionLabel={(option) => option.username}
+            value={attendees}
+            onChange={(event, newValue) => setAttendees(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Attendees"
+                placeholder="Select attendees"
+                margin="normal"
+                fullWidth
+              />
+            )}
+            sx={{ mb: 2 }}
+          />
 
           <Typography variant="subtitle1" sx={{ mt: 2 }}>
             Reminders:

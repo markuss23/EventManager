@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
   Box,
@@ -10,6 +10,7 @@ import {
   IconButton,
   List,
   Alert,
+  Autocomplete,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -49,6 +50,21 @@ function CreateEvent({ open, handleClose }) {
   const [newReminderTime, setNewReminderTime] = useState("");
   const [newReminderText, setNewReminderText] = useState("");
   const [error, setError] = useState("");
+  const [attendees, setAttendees] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+
+  useEffect(() => {
+    if (user && user.user && user.user.token) {
+      fetch(`${API_URL}/users/`, {
+        headers: {
+          Authorization: `Bearer ${user.user.token}`,
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => setAllUsers(data))
+        .catch((error) => console.error("Error fetching users:", error));
+    }
+  }, [user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -78,13 +94,19 @@ function CreateEvent({ open, handleClose }) {
       setError("End time should be after start time.");
       return;
     }
+
+    if (!user || !user.user || !user.user.token) {
+      setError("User is not authenticated.");
+      return;
+    }
+
     const eventObject = {
       title,
       start_time: startTime.utc(true).format(),
       end_time: endTime.utc(true).format(),
       description,
       creator: user.user._id,
-      attendees: [],
+      attendees: attendees.map((attendee) => attendee._id),
       reminders,
     };
 
@@ -121,6 +143,7 @@ function CreateEvent({ open, handleClose }) {
         setReminders([]);
         setNewReminderTime("");
         setNewReminderText("");
+        setAttendees([]);
         handleClose();
       })
       .catch((error) => {
@@ -200,6 +223,25 @@ function CreateEvent({ open, handleClose }) {
               />
             </div>
           </LocalizationProvider>
+
+          <Autocomplete
+            multiple
+            options={allUsers}
+            getOptionLabel={(option) => option.username}
+            value={attendees}
+            onChange={(event, newValue) => setAttendees(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                label="Attendees"
+                placeholder="Select attendees"
+                margin="normal"
+                fullWidth
+              />
+            )}
+            sx={{ mb: 2 }}
+          />
 
           <Typography variant="subtitle1" sx={{ mt: 2 }}>
             Reminders:
